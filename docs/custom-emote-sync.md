@@ -1,0 +1,15 @@
+# Custom emote synchronization (local build)
+
+Based on tag v0.5.1; no new dependencies. Both clients advertise `emoteSync: 1` in optional presence metadata. Protocol v1, normal ping/emote traffic and old clients remain compatible.
+
+A missing remote custom ref triggers addressed `emoteRequest` messages. The sender serves only its own custom stills offered by an actual emote gesture in the preceding 60 seconds. Each request selects one 600-byte block; `emoteChunk` includes index, total length and base64 data. Messages use existing AES-256-GCM transport and 1200-byte packet limits. Internet messages use existing room relays; no image hosting service is added.
+
+Downloads are capped at eight, polled round-robin every 400 ms, with four attempts per block, a 2-second response timeout and a 45-second overall deadline. Sender traffic is limited to three asset packets per second and shares the original relay cap. Receiving assets has a separate bounded budget and cannot consume the ordinary ping budget. Pause, room mute, member mute and incompatible protocol gates apply. Leaving a room cancels in-flight work.
+
+Stills must match the existing SHA-256-derived ref, WebP format, 160-pixel maximum side and 12288-byte maximum size. Received images are written atomically to a separate `emote-cache` collection with at most 256 entries. Startup validates cached files before exposing them. Cache contents do not enter the user's editable collection. The renderer uses the existing constrained lolping protocol. Only the latest pending emote per member may display when its image arrives, within 15 seconds and while receiving remains allowed.
+
+This custom build disables upstream automatic/manual updater integration so a release lacking synchronization cannot overwrite it. User settings are unchanged. Remote animation transfer is out of scope; imported animations retain their original local playback.
+
+Validation: 724 full-suite tests passed with four workers; two additional cache/cancellation edge tests passed afterward. Type check and production build passed. Encrypted two-client tests cover LAN/shared internet routing, block loss and persistent cache reuse. Internet relays were simulated, not tested between two actual external networks. A real Electron smoke test launched the packaged app with isolated data and decoded/rendered a cached 100x100 WebP without a question bubble. `tools/smoke-app.cjs` is that local smoke harness; it expects the prepared runtime and release directories. No C++ compiler is installed, so packaging reused the unchanged official 0.5.1 input helper and its protocol tests passed. The existing build-tool dependency audit reports nine advisories (eight moderate, one high); no dependencies were added or changed by this feature.
+
+Build: npm ci --ignore-scripts; place the official 0.5.1 helper at native/hook-helper/build/hook-helper.exe; npm run build; electron-builder --win --x64 --publish never. This machine used the original Electron 44.5.1 distribution via --config.electronDist=electron-runtime. Keep the normal Microsoft C++ toolchain requirement if rebuilding the helper from source.

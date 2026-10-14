@@ -1,5 +1,6 @@
 import { app, clipboard, dialog, Menu, powerMonitor, screen, shell, systemPreferences } from 'electron';
 import { randomBytes, randomInt } from 'node:crypto';
+import { open } from 'node:fs/promises';
 import { userInfo } from 'node:os';
 import { join } from 'node:path';
 import { resolveLang, strings, type Strings } from '../shared/i18n';
@@ -9,10 +10,14 @@ import { configCommand, type HelperStatus } from '../shared/protocol';
 import type { RoomState } from '../shared/room';
 import { formatRoomCode, parseRoomCode } from '../shared/roomCode';
 import { overlaySettings, type Settings } from '../shared/settings';
+import { customHash, isCustomRef, STILL_MAX_BYTES } from '../shared/emotes';
+import type { EmoteAssetMsg } from '../shared/roomProtocol';
 import { updateErrorText, type UpdateState } from '../shared/update';
 import { registerAppScheme, serveAppScheme } from './appProtocol';
 import { resolveTarget, toShared } from './displayNumbers';
 import { EmoteLibrary, resolveEmoteArt } from './emoteLibrary';
+import { EmoteCache } from './emoteCache';
+import { EmoteSync } from './emoteSync';
 import { InputBridge } from './inputBridge';
 import { LanTransport } from './lanTransport';
 import { RELAYS } from './relays';
@@ -20,7 +25,7 @@ import { RelayTransport } from './relayTransport';
 import { OverlayManager, type SharedEmote, type SharedPing } from './overlayManager';
 import { assetPath, buildResourcePath, helperExePath, IS_MAC, PLATFORM, settingsDir } from './paths';
 import { deriveRoomKeys } from './roomCrypto';
-import { RoomManager, type RoomToast } from './roomManager';
+import { RoomManager, type RemoteEmote, type RoomToast } from './roomManager';
 import { registerSettingsIpc } from './settingsIpc';
 import { SettingsStore } from './settingsStore';
 import { onSettingsWindowGone, openSettingsWindow, settingsWindow } from './settingsWindow';
@@ -67,11 +72,13 @@ function setMacMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate([{ role: 'appMenu' }, { role: 'editMenu' }, { role: 'windowMenu' }]));
 }
 
-function start(): void {
+async function start(): Promise<void> {
   const library = new EmoteLibrary(join(settingsDir(), 'emotes'));
+  const emoteCache = new EmoteCache(join(settingsDir(), 'emote-cache'));
+  await emoteCache.load().catch((err: Error) => console.warn('[emotes] cache unavailable:', err.message));
   serveAppScheme({
     rendererRoot: process.env.ELECTRON_RENDERER_URL ? null : join(__dirname, '../renderer'), // development pages come from Vite
-    emoteDirs: () => [library.dir],
+    emoteDirs: () => [library.dir, emoteCache.dir],
   });
   if (IS_MAC) {
     app.dock?.hide(); // a menu bar app: the Dock icon only shows while settings are open
@@ -88,13 +95,15 @@ function start(): void {
   let quitting = false; // read by pushStatus: once true, the tray and overlays are gone
   let capturing = false; // the settings page is listening for a key, so the helper must stay suspended
 
-  const overlays = new OverlayManager(overlaySettings(settings), (ref, remote) => resolveEmoteArt(ref, settings.customEmotes, remote));
+  const overlays = new OverlayManager(overlaySettings(settings), (ref, remote) =>
+    resolveEmoteArt(ref, settings.customEmotes, remote, remote && emoteCache.has(ref)));
   overlays.start();
   const bridge = new InputBridge({ command: helperExePath() });
 
   // Updates: only in an installed build, or in a development build pointed at a test server with LOLPING_UPDATE_TEST_URL.
   const testUrl = process.env.LOLPING_UPDATE_TEST_URL || undefined;
-  const updater = app.isPackaged || testUrl ? createUpdater() : null;
+  // This local build must not be replaced by an upstream update that lacks image synchronization.
+  const updater = testUrl ? createUpdater() : null;
   function createUpdater(): Updater {
     const backend = IS_MAC
       ? new MacBackend({
@@ -253,10 +262,42 @@ function start(): void {
     const shared = toShared(overlays.numbered(), p.displayId, p.x, p.y);
     if (shared) room.sendPing(p.id, shared);
   });
-  room.on('remoteEmote', (p) => overlays.spawnRemoteEmote(p));
+  const emoteSync = new EmoteSync({
+    cache: emoteCache,
+    send: (peer, body) => room.sendEmoteAsset(peer, body),
+    readLocal: async (ref) => {
+      if (!isCustomRef(ref) || !settings.customEmotes.some((c) => c.id === ref)) return null;
+      const file = await open(join(library.dir, `${customHash(ref)}.webp`), 'r');
+      try {
+        if ((await file.stat()).size > STILL_MAX_BYTES) return null;
+        const bytes = Buffer.alloc(STILL_MAX_BYTES + 1);
+        const { bytesRead } = await file.read(bytes, 0, bytes.length, 0);
+        return bytesRead <= STILL_MAX_BYTES ? bytes.subarray(0, bytesRead) : null;
+      } finally { await file.close(); }
+    },
+  });
+  const pendingEmotes = new Map<string, { emote: RemoteEmote; at: number }>();
+  room.on('remoteEmote', (p: RemoteEmote) => {
+    pendingEmotes.delete(p.peer); // a newer emote always supersedes an older image still being downloaded
+    if (isCustomRef(p.ref) && !settings.customEmotes.some((c) => c.id === p.ref) && !emoteCache.has(p.ref) && room.supportsEmoteSync(p.peer)) {
+      pendingEmotes.set(p.peer, { emote: p, at: Date.now() });
+      emoteSync.want(p.peer, p.ref);
+    } else overlays.spawnRemoteEmote(p);
+  });
+  emoteSync.on('ready', (peer: string, ref: string) => {
+    const pending = pendingEmotes.get(peer);
+    if (!pending || pending.emote.ref !== ref) return;
+    pendingEmotes.delete(peer);
+    if (Date.now() - pending.at < 15_000 && room.canReceiveEmote(peer)) overlays.spawnRemoteEmote(pending.emote);
+  });
+  room.on('emoteAsset', (msg: EmoteAssetMsg) => {
+    void emoteSync.receive(msg).catch((err: Error) => console.warn('[emotes] synchronization failed:', err.message));
+  });
+  room.on('sessionReset', () => { emoteSync.reset(); pendingEmotes.clear(); });
+  app.on('before-quit', () => emoteSync.reset());
   overlays.on('sharedEmote', (p: SharedEmote) => {
     const shared = toShared(overlays.numbered(), p.displayId, p.x, p.y);
-    if (shared) room.sendEmote(p.ref, shared);
+    if (shared) { emoteSync.offer(p.ref); room.sendEmote(p.ref, shared); }
   });
   room.on('saveCode', (code: string | null) => store.update({ lastRoomCode: code }));
   room.on('toast', (n: RoomToast) => {
