@@ -1,4 +1,4 @@
-import { isEmoteRefShape, type EmoteRef } from './emotes';
+import { isCustomRef, isEmoteRefShape, STILL_MAX_BYTES, type EmoteRef } from './emotes';
 import { isPingId, type PingId } from './pings';
 import { isTagColor } from './roomColors';
 
@@ -26,6 +26,8 @@ export interface PresenceMsg extends Base {
   name: string;
   color: number;
   status: MemberStatus;
+  /** Optional capability: older clients ignore this and continue receiving ordinary pings. */
+  emoteSync?: 1;
 }
 export interface PingMsg extends Base {
   t: 'ping';
@@ -48,7 +50,25 @@ export interface EmoteMsg extends Base {
 export interface ByeMsg extends Base {
   t: 'bye';
 }
-export type RoomMessage = PresenceMsg | PingMsg | EmoteMsg | ByeMsg;
+export const EMOTE_CHUNK_BYTES = 600;
+export const EMOTE_MAX_CHUNKS = Math.ceil(STILL_MAX_BYTES / EMOTE_CHUNK_BYTES);
+export interface EmoteRequestMsg extends Base {
+  t: 'emoteRequest';
+  to: string;
+  e: EmoteRef;
+  i: number;
+}
+export interface EmoteChunkMsg extends Base {
+  t: 'emoteChunk';
+  to: string;
+  e: EmoteRef;
+  i: number;
+  total: number;
+  data: string;
+}
+export type EmoteAssetMsg = EmoteRequestMsg | EmoteChunkMsg;
+export type EmoteAssetBody = Omit<EmoteRequestMsg, keyof Base | 'to'> | Omit<EmoteChunkMsg, keyof Base | 'to'>;
+export type RoomMessage = PresenceMsg | PingMsg | EmoteMsg | ByeMsg | EmoteAssetMsg;
 
 // C0/C1 controls, zero-width characters, bidi marks, embeddings and isolates, BOM, line/paragraph separators,
 // soft hyphen, combining grapheme joiner, Arabic letter mark, Mongolian vowel separator and the Hangul fillers
@@ -80,7 +100,8 @@ export function validateMessage(raw: unknown): RoomMessage | null {
       const { proto, app, name, color, status } = raw;
       if (!isUint(proto) || typeof app !== 'string' || app.length > MAX_APP_VERSION || typeof name !== 'string') return null;
       if (!isTagColor(color) || !STATUSES.includes(status as MemberStatus)) return null;
-      return { t, ...base, proto, app, name: sanitizeName(name.slice(0, 256)), color, status: status as MemberStatus };
+      return { t, ...base, proto, app, name: sanitizeName(name.slice(0, 256)), color, status: status as MemberStatus,
+        ...(raw.emoteSync === 1 ? { emoteSync: 1 as const } : {}) };
     }
     case 'ping': {
       const { ping, d, x, y } = raw;
@@ -93,6 +114,21 @@ export function validateMessage(raw: unknown): RoomMessage | null {
       if (!isEmoteRefShape(e) || !Number.isInteger(d) || (d as number) < 1 || (d as number) > MAX_DISPLAY) return null;
       if (!isUnit(x) || !isUnit(y)) return null;
       return { t, ...base, e, d: d as number, x, y };
+    }
+    case 'emoteRequest':
+    case 'emoteChunk': {
+      const { to, e, i } = raw;
+      if (typeof to !== 'string' || !/^[0-9a-f]{16}$/.test(to) || !isCustomRef(e)) return null;
+      if (!isUint(i) || i >= EMOTE_MAX_CHUNKS) return null;
+      if (t === 'emoteRequest') return { t, ...base, to, e, i };
+      const { total, data } = raw;
+      if (!isUint(total) || total < 1 || total > STILL_MAX_BYTES || i * EMOTE_CHUNK_BYTES >= total) return null;
+      const length = Math.min(EMOTE_CHUNK_BYTES, total - i * EMOTE_CHUNK_BYTES);
+      if (typeof data !== 'string' || data.length !== 4 * Math.ceil(length / 3)) return null;
+      if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(data)) return null;
+      const padding = data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0;
+      if (data.length / 4 * 3 - padding !== length) return null;
+      return { t, ...base, to, e, i, total, data };
     }
     case 'bye':
       return { t, ...base };

@@ -766,3 +766,43 @@ describe('internet over a shared transport', () => {
   });
 });
 
+
+describe('custom image transport', () => {
+  const ref = `c:${'a'.repeat(32)}`;
+  it('advertises support, addresses encrypted chunks and stays below the packet cap', async () => {
+    await joinActive();
+    const alex = new Remote('1111111111111111', 'lan:a', lan);
+    alex.presence({ app: '0.5.1', emoteSync: 1 });
+    expect(sentMessages('*')[0]).toMatchObject({ emoteSync: 1 });
+    expect(room.supportsEmoteSync(alex.peer)).toBe(true);
+    expect(room.sendEmoteAsset(alex.peer, { t: 'emoteChunk', e: ref, i: 0, total: 600, data: Buffer.alloc(600).toString('base64') })).toBe(true);
+    const last = lan.sent.at(-1)!;
+    expect(last.to).toBe('lan:a'); expect(last.packet.length).toBeLessThanOrEqual(1200);
+    expect(decodeMessage(open(KEYS.msgKey, last.packet)!)).toMatchObject({ t: 'emoteChunk', to: alex.peer, e: ref });
+  });
+  it('accepts only addressed asset messages from capable, unmuted members without consuming the ping budget', async () => {
+    await joinActive();
+    const alex = new Remote('1111111111111111', 'lan:a', lan);
+    alex.presence({ emoteSync: 1 });
+    const incoming = vi.fn(); room.on('emoteAsset', incoming);
+    const request = { t: 'emoteRequest', to: room.self, e: ref, i: 0 };
+    lan.deliver(alex.key, alex.packet({ ...request, to: '3333333333333333' }));
+    expect(incoming).not.toHaveBeenCalled();
+    for (let i = 0; i < 8; i++) lan.deliver(alex.key, alex.packet(request));
+    expect(incoming).toHaveBeenCalledTimes(8);
+    for (let i = 0; i < 5; i++) alex.ping();
+    expect(pings).toHaveLength(5);
+    room.muteMember(alex.peer, true);
+    lan.deliver(alex.key, alex.packet(request)); expect(incoming).toHaveBeenCalledTimes(8);
+    expect(room.sendEmoteAsset(alex.peer, { t: 'emoteRequest', e: ref, i: 0 })).toBe(false);
+  });
+  it('does not send image requests to old clients or after leaving', async () => {
+    await joinActive();
+    const alex = new Remote('1111111111111111', 'lan:a', lan);
+    alex.presence();
+    expect(room.supportsEmoteSync(alex.peer)).toBe(false);
+    expect(room.sendEmoteAsset(alex.peer, { t: 'emoteRequest', e: ref, i: 0 })).toBe(false);
+    alex.presence({ emoteSync: 1 }); room.leave();
+    expect(room.sendEmoteAsset(alex.peer, { t: 'emoteRequest', e: ref, i: 0 })).toBe(false);
+  });
+});

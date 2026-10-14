@@ -4,7 +4,7 @@ import type { PingId } from '../shared/pings';
 import type { JoinResult, MemberPath, RoomMember, RoomStateCore } from '../shared/room';
 import { formatRoomCode, makeRoomCode, parseRoomCode } from '../shared/roomCode';
 import {
-  decodeMessage, encodeMessage, isOlderThan, PROTOCOL_VERSION, type MemberStatus, type PresenceMsg, type RoomMessage,
+  decodeMessage, encodeMessage, isOlderThan, PROTOCOL_VERSION, type EmoteAssetBody, type MemberStatus, type PresenceMsg, type RoomMessage,
 } from '../shared/roomProtocol';
 import { RateLimiter } from './rateLimiter';
 import { ReplayGuard } from './replayGuard';
@@ -79,6 +79,7 @@ interface Member {
   status: MemberStatus;
   needsUpdate: boolean;
   noEmotes: boolean;
+  emoteSync: boolean;
   muted: boolean;
   firstSeen: number;
   /** Ever heard over the internet: dropped after the longer silence. */
@@ -126,6 +127,8 @@ export class RoomManager extends EventEmitter {
   /** The transports running for this room: all of them, except the internet one while it isn't allowed. */
   private readonly active = new Set<Transport>();
   private readonly relayCap: RateLimiter;
+  private readonly assetReceiveCap: RateLimiter;
+  private readonly assetSendCap: RateLimiter;
   /** A presence waiting out SHARED_PRESENCE_MS, per shared transport. */
   private readonly sharedTimers = new Map<Transport, NodeJS.Timeout>();
 
@@ -135,6 +138,8 @@ export class RoomManager extends EventEmitter {
     this.guard = new ReplayGuard(deps.now);
     this.limiter = new RateLimiter(deps.now);
     this.relayCap = new RateLimiter(deps.now);
+    this.assetReceiveCap = new RateLimiter(deps.now);
+    this.assetSendCap = new RateLimiter(deps.now);
     for (const t of deps.transports) {
       t.on('packet', (peer: PeerKey, packet: Uint8Array) => this.onPacket(t, peer, packet));
       t.on('peerGone', (peer: PeerKey) => this.onPeerGone(t, peer));
@@ -176,6 +181,26 @@ export class RoomManager extends EventEmitter {
 
   sendEmote(e: EmoteRef, shared: { d: number; x: number; y: number }): void {
     this.sendShared({ t: 'emote', e, ...shared });
+  }
+
+  supportsEmoteSync(peer: string): boolean {
+    return this.members.get(peer)?.emoteSync === true;
+  }
+
+  /** Image traffic uses a separate, smaller budget and the existing relay cap; all packets remain encrypted. */
+  sendEmoteAsset(peer: string, body: EmoteAssetBody): boolean {
+    const m = this.members.get(peer);
+    if (!this.keys || this.paused || this.roomMuted || !m || m.muted || m.needsUpdate || !m.emoteSync) return false;
+    const route = this.route(m);
+    if (!route || !this.assetSendCap.allow('all', 3, 3)) return false;
+    if (route.transport.shared && !this.relayCap.allow(route.transport.kind, RELAY_PING_RATE, RELAY_PING_BURST)) return false;
+    route.transport.sendTo(route.key, this.seal({ ...body, to: peer }));
+    return true;
+  }
+
+  canReceiveEmote(peer: string): boolean {
+    const m = this.members.get(peer);
+    return this.phase !== 'idle' && !this.paused && !this.roomMuted && !!m && !m.muted && !m.needsUpdate;
   }
 
   /** A ping or an emote: each member gets it over its own route; shared transports get one send, within the relay cap. */
@@ -342,6 +367,8 @@ export class RoomManager extends EventEmitter {
     this.answered.clear();
     this.staleStrikes.clear();
     this.lastPresence = {};
+    this.assetReceiveCap.clear(); this.assetSendCap.clear();
+    this.emit('sessionReset');
     this.aloneSince = null;
     this.emitState();
   }
@@ -382,6 +409,12 @@ export class RoomManager extends EventEmitter {
     this.heard(m, t, key);
     // Pings and emotes pass the same gates and share one budget per member.
     if (this.paused || this.roomMuted || m.muted || m.needsUpdate) return;
+    if (msg.t === 'emoteRequest' || msg.t === 'emoteChunk') {
+      if (msg.to !== this.self || !m.emoteSync) return;
+      if (!this.assetReceiveCap.allow(m.peer, 12, 16) || !this.assetReceiveCap.allow('all', 48, 64)) return;
+      this.emit('emoteAsset', msg);
+      return;
+    }
     if (!this.limiter.allow(m.peer, this.deps.profile().limit)) return;
     const target = this.deps.resolveTarget(msg.d);
     if (!target) return;
@@ -396,7 +429,7 @@ export class RoomManager extends EventEmitter {
     const isNew = !m;
     if (!m) {
       m = {
-        peer: msg.peer, name: msg.name, color: msg.color, status: msg.status, needsUpdate: false, noEmotes: false, muted: false,
+        peer: msg.peer, name: msg.name, color: msg.color, status: msg.status, needsUpdate: false, noEmotes: false, emoteSync: false, muted: false,
         firstSeen: this.deps.now(), viaInternet: false, paths: {},
       };
       this.members.set(m.peer, m);
@@ -407,6 +440,7 @@ export class RoomManager extends EventEmitter {
     m.status = msg.status;
     m.needsUpdate = msg.proto !== PROTOCOL_VERSION;
     m.noEmotes = isOlderThan(msg.app, EMOTES_SINCE);
+    m.emoteSync = msg.emoteSync === 1;
     this.heard(m, t, key);
     if (!this.answered.has(key)) {
       this.answered.add(key);
@@ -442,6 +476,7 @@ export class RoomManager extends EventEmitter {
   private remove(m: Member, kind: 'left' | 'disconnected'): void {
     this.members.delete(m.peer);
     this.limiter.forget(m.peer);
+    this.assetReceiveCap.forget(m.peer);
     for (const p of Object.values(m.paths)) this.answered.delete(p.key);
     if (this.members.size === 0 && this.phase !== 'idle') this.aloneSince = this.deps.now();
     this.emit('toast', { kind, name: m.name } satisfies RoomToast);
@@ -471,7 +506,7 @@ export class RoomManager extends EventEmitter {
 
   private presencePacket(): Buffer {
     const p = this.deps.profile();
-    return this.seal({ t: 'presence', proto: PROTOCOL_VERSION, app: this.deps.appVersion, name: p.name, color: p.color, status: this.status() });
+    return this.seal({ t: 'presence', proto: PROTOCOL_VERSION, app: this.deps.appVersion, name: p.name, color: p.color, status: this.status(), emoteSync: 1 });
   }
 
   /**
