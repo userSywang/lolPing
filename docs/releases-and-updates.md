@@ -41,3 +41,5 @@ git push origin main v0.5.6
 任一构建失败时，Release 保持草稿，已安装客户端不会看到半成品。修复后重跑失败任务；已公开的版本不改标签或覆写安装包，发布更高的修复版本。若必须撤回故障版本，先停止其公开可见性并发布更高版本，不让自动更新降级。
 
 本地快速构建可复用经过验证的同版本 Electron 和输入辅助程序；正式 CI 从源码构建辅助程序，独立验证两个平台。macOS 仍为实验性支持，实际使用问题请在本项目反馈。
+
+首个正式版本的实际验证结果见 [v0.5.5 发布验证](v0.5.5-verification.md)。`tools/smoke-update.cjs` 提供隔离的真实更新检查；后续可用 `LOLPING_SMOKE_CURRENT_VERSION` 和 `LOLPING_SMOKE_TARGET_VERSION` 指定要验证的版本，不下载或安装。
