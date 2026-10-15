@@ -19,6 +19,8 @@
 6. Release 工作流创建草稿，分别构建和验证 Windows/macOS，上传 `.exe`、`.blockmap`、`latest.yml` 和 arm64 `.dmg`。全部成功后公开正式 Release。
 7. 公开后确认最新版本、说明、资产及 `latest.yml` 的版本、文件大小和 SHA-512 一致，再验证软件内手动检查。
 
+首次启用 fork 的 Actions 时，之前的标签推送不会补触发。可在 Actions → Release → Run workflow 中选择 main，填写已存在的正式标签（如 v0.5.5），从该标签重新执行相同的发布流程。CI 同样支持手动运行；不需要移动或重打旧标签。
+
 命令示例（版本号替换为实际要发布的版本）：
 
 ```sh
