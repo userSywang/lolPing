@@ -34,7 +34,7 @@ This fork is based on [darrenprx/lolPing](https://github.com/darrenprx/lolPing),
 - Each sender owns one announcement, replaced only by that sender, expiring after 60 seconds by default. Announcements arrange automatically and coexist with random messages.
 - Settings exposes separate appearance, position and lifetime controls. Ctrl+Alt+Backspace clears local text overlays.
 - Text is end-to-end encrypted with no transcript storage. Room-code holders and recipients can decrypt.
-- Installed builds check stable releases from **userSywang/lolPing**, published from main, with downloads and installation initiated by the user. Earlier custom builds need a one-time manual upgrade to v0.5.5.
+- Installed builds check stable releases from **userSywang/lolPing**, published from main, with downloads and installation initiated by the user. Earlier custom builds need a one-time manual upgrade to the current stable version.
 
 See [release maintenance](docs/releases-and-updates.md) for the publication process.
 
