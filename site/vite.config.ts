@@ -25,5 +25,8 @@ export default defineConfig({
       },
     },
   ],
-  build: { outDir: resolve('site-dist'), emptyOutDir: true },
+  build: {
+    outDir: resolve('site-dist'), emptyOutDir: true,
+    rollupOptions: { input: { index: resolve('site/index.html'), bubbles: resolve('site/bubbles.html') } },
+  },
 });

@@ -1,0 +1,41 @@
+.cat-bubble {
+  --cat-height: 154px;
+  --cat-font-size: 24px;
+  /* Original asset: 2032 x 774. Full-height left/right slices protect face, tail and paws. */
+  --cat-left: calc(var(--cat-height) * 500 / 774);
+  --cat-right: calc(var(--cat-height) * 350 / 774);
+  box-sizing: content-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  width: max-content;
+  min-width: 105px;
+  max-width: min(330px, calc(100vw - var(--cat-left) - var(--cat-right) - 48px));
+  height: var(--cat-height);
+  border-style: solid;
+  border-color: transparent;
+  border-width: 0 var(--cat-right) 0 var(--cat-left);
+  border-image-source: url('../../../assets/chat/long-cat-frame.png');
+  border-image-slice: 0 350 0 500 fill;
+  border-image-repeat: stretch;
+  color: #201b16;
+  font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+  font-size: var(--cat-font-size);
+  font-weight: 400;
+  line-height: 1.3;
+  text-align: center;
+  pointer-events: none;
+  user-select: none;
+}
+.cat-bubble__text {
+  display: block;
+  position: relative;
+  top: calc(var(--cat-height) * -.09);
+  max-width: 100%;
+  padding-inline: 4px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.cat-bubble--compact { --cat-height: 104px; min-width: 80px; max-width: min(250px, calc(100vw - var(--cat-left) - var(--cat-right) - 48px)); }
+@media (prefers-reduced-motion: reduce) { .cat-bubble { animation: none !important; transition: none !important; } }

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>长条猫猫 · lolPing 气泡预览</title></head>
+<body>
+  <main class="studio">
+    <header><a class="brand" href="./bubbles.html">lolPing <span>/ 桌面悄悄话</span></a><span class="status">样式预览</span></header>
+    <section class="intro"><span class="eyebrow">一只猫，替你说句话。</span><h1>长条猫猫</h1><p>字多一点，猫就长一点。打个招呼，或悄悄问一句「午饭吃啥」。</p></section>
+    <div class="workspace">
+      <section class="canvas-section" aria-label="气泡预览">
+        <div class="canvas-bar"><span>你的桌面角落</span><button id="background" type="button">切换深色背景</button></div>
+        <div id="stage" class="stage" aria-label="消息显示区域"><span class="stage-label">只在这里试试看，不会发送给好友</span><div id="bubble-mount" class="bubble-mount"></div></div>
+        <div class="presets" aria-label="示例短句"><button type="button" data-message="hi! 大家好">打个招呼</button><button type="button" data-message="老板来了，先装忙。">悄悄摸鱼</button><button type="button" data-message="中午吃什么？我已经开始饿了。">午饭搭子</button><button type="button" data-message="这是一条稍长的悄悄话，猫猫会帮你自动换行，脑袋和爪子不会被拉扁。">试试长句</button></div>
+      </section>
+      <form id="controls" class="controls">
+        <label for="message">让猫猫说什么<span id="count">8 / 100</span></label>
+        <textarea id="message" rows="3" maxlength="200" placeholder="输入一句悄悄话…">hi! 大家好</textarea>
+        <p class="hint">支持中文、换行和表情，最多 100 个字符。长句会自动缩小字号。</p>
+        <fieldset class="mode-field"><legend>显示感觉</legend><div class="mode-switch"><button type="button" id="playful" aria-pressed="true">俏皮一点</button><button type="button" id="office" aria-pressed="false">低调摸鱼</button></div></fieldset>
+        <label for="size">字号<span id="size-value">24 px</span></label><input id="size" type="range" min="12" max="32" value="24">
+        <label for="opacity">透明度<span id="opacity-value">100%</span></label><input id="opacity" type="range" min="30" max="100" value="100">
+        <div class="color-row"><label for="color">文字颜色</label><input id="color" type="color" value="#201b16"></div>
+        <label for="position">出现在哪里</label><select id="position"><option value="fixed">固定在右下角</option><option value="mouse">鼠标附近</option><option value="random">随机位置</option></select>
+        <button class="preview-button" id="preview" type="button">让猫猫冒个泡</button>
+        <p id="feedback" class="hint" aria-live="polite">鼠标附近模式下，在左侧预览区域移动鼠标。</p>
+      </form>
+    </div>
+    <footer>猫头、尾巴和爪子保留比例，中间身体随文字伸缩。此页为样式预览，房间文字通信尚未接入。</footer>
+  </main>
+  <script type="module" src="./bubblePreview.ts"></script>
+</body>
+</html>
