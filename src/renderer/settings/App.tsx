@@ -1,4 +1,4 @@
-import { Dropdown, FluentProvider, Option, webDarkTheme, webLightTheme } from '@fluentui/react-components';
+import { Button, Dropdown, FluentProvider, Option, webDarkTheme, webLightTheme } from '@fluentui/react-components';
 import {
   ArrowMove24Regular, ArrowSync24Regular, CursorClick24Regular, DataPie24Regular, Games24Regular, Info24Regular, Keyboard24Regular, MusicNote224Regular,
   Power24Regular, ResizeLarge24Regular, Rocket24Regular, Settings24Regular, Speaker224Regular, SpeakerMute24Regular,
@@ -38,6 +38,7 @@ const SECTIONS: { id: string; label: (t: Strings) => string; icon: ReactNode }[]
   { id: 'wheel', label: (t) => t.navWheel, icon: <DataPie24Regular /> },
   { id: 'emotes', label: (t) => t.navEmotes, icon: <Emoji24Regular /> },
   { id: 'room', label: (t) => t.navRoom, icon: <PeopleCommunity24Regular /> },
+  { id: 'chat', label: (t) => t.lang === 'zh-CN' ? '悄悄话' : 'Private chat', icon: <Keyboard24Regular /> },
   { id: 'app', label: (t) => t.navApp, icon: <Settings24Regular /> },
 ];
 
@@ -202,6 +203,11 @@ function SettingsPage({ settings: s, status, update }: { settings: Settings; sta
 
         <div className="section" id="room">{t.navRoom}</div>
         <RoomSection settings={s} update={update} />
+
+        <div className="section" id="chat">{t.lang === 'zh-CN' ? '桌面悄悄话' : 'Private room chat'}</div>
+        <SettingRow icon={<Keyboard24Regular />} title="猫猫文字气泡" description="Ctrl+Alt+Enter 打开输入；Ctrl+Alt+Backspace 立即隐藏。双方需要安装新版，文字端到端加密，不保存聊天记录。">
+          <Button onClick={() => void api.openChat()}>打开输入与外观设置</Button>
+        </SettingRow>
 
         <div className="section" id="app">{t.navApp}</div>
         <SwitchRow icon={<Rocket24Regular />} title={t.launchAtStartup} description={t.launchAtStartupDesc}

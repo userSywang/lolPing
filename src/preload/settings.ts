@@ -9,6 +9,7 @@ function subscribe<T>(channel: string, cb: (v: T) => void): () => void {
 }
 
 const api: SettingsApi = {
+  openChat: () => ipcRenderer.invoke(SETTINGS_CH.chatOpen),
   // Inlined rather than imported: a sandboxed preload can't require a shared chunk.
   platform: process.platform === 'darwin' ? 'mac' : 'win',
   getSettings: () => ipcRenderer.invoke(SETTINGS_CH.get),

@@ -19,6 +19,8 @@ export interface PingTag {
 
 /** main → overlay renderer messages. Points are CSS pixels inside that overlay. */
 export interface OverlayEvents {
+  'chat:spawn': Point & { text: string; name: string };
+  'chat:clear': null;
   'overlay:settings': OverlaySettings;
   /** `wheel` names the wheel the gesture belongs to; missing means 'ping' (the site demo leaves it out). */
   'wheel:open': Point & { wheel?: WheelKind };
@@ -37,7 +39,7 @@ export type OverlayChannel = keyof OverlayEvents;
 
 export const OVERLAY_CHANNELS: readonly OverlayChannel[] = [
   'overlay:settings', 'wheel:open', 'wheel:move', 'wheel:release', 'wheel:cancel', 'ping:spawn', 'emote:spawn', 'emote:clear',
-  'toast:show',
+  'toast:show', 'chat:spawn', 'chat:clear',
 ];
 
 /** overlay renderer → main: string[] of asset files that failed to load. */
@@ -71,6 +73,7 @@ export { SETTINGS_CH } from './settingsChannels';
 
 /** window.settingsApi in the settings renderer. */
 export interface SettingsApi {
+  openChat(): Promise<void>;
   readonly platform: Platform;
   getSettings(): Promise<Settings>;
   setSettings(patch: Partial<Settings>): Promise<SetSettingsResult>;

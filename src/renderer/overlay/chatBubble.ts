@@ -5,6 +5,7 @@ export interface CatBubbleOptions {
   color?: string;
   opacity?: number;
   compact?: boolean;
+  maxWidth?: number;
 }
 
 const clamp = (n: number, low: number, high: number) => Math.max(low, Math.min(high, n));
@@ -17,19 +18,20 @@ export function createCatBubble(options: CatBubbleOptions): HTMLElement {
   text.className = 'cat-bubble__text';
   text.textContent = [...options.text].slice(0, 100).join('');
   root.append(text);
-  // A long message needs the normal torso area even when the low-key preset is selected.
-  if (options.compact && [...text.textContent].length <= 50) root.classList.add('cat-bubble--compact');
-  const fontSize = clamp(options.fontSize ?? 24, 12, 32);
+  const fontSize = clamp(options.fontSize ?? (options.compact ? 16 : 24), 12, 32);
+  const scale = fontSize / 24;
   root.style.setProperty('--cat-font-size', `${fontSize}px`);
+  root.style.setProperty('--cat-height', `${154 * scale}px`);
+  root.style.minWidth = `${105 * scale}px`;
+  root.style.maxWidth = `${Math.max(105 * scale, Math.min(600 * scale, options.maxWidth ?? 600 * scale))}px`;
   root.style.opacity = String(clamp(options.opacity ?? 1, .3, 1));
   if (options.color && /^#[0-9a-f]{6}$/i.test(options.color)) root.style.color = options.color;
   // Fit long text inside the actual painted torso, never on the paws. Refit when the container resizes.
   const fit = () => {
     if (!root.isConnected) return;
-    const available = root.clientHeight * .43;
-    let size = fontSize;
-    text.style.fontSize = `${size}px`;
-    while (text.scrollHeight > available && size > 10) text.style.fontSize = `${--size}px`;
+    text.style.fontSize = `${fontSize}px`;
+    // Preserve the chosen font size. Grow the whole frame for extra lines, including proportional end caps.
+    root.style.setProperty('--cat-height', `${Math.max(154 * scale, Math.ceil(text.scrollHeight / .43))}px`);
   };
   requestAnimationFrame(fit);
   // A custom event keeps ownership/lifecycle with the caller, without a persistent observer per message.

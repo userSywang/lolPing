@@ -14,6 +14,7 @@ import { spawnPing } from './pingFx';
 import { SoundBank } from './soundBank';
 import { showToast } from './toast';
 import { Wheel, type WheelItem } from './wheel';
+import { ChatStage } from './chatFx';
 
 const pingLayer = document.getElementById('pings') as HTMLElement;
 const toastLayer = document.getElementById('toasts') as HTMLElement;
@@ -29,6 +30,8 @@ pingLayer.after(emoteLayer);
 
 const sounds = new SoundBank();
 const stage = new EmoteStage(emoteLayer);
+const chatLayer = document.createElement('div'); chatLayer.id = 'chats'; emoteLayer.after(chatLayer);
+const chatStage = new ChatStage(chatLayer);
 let settings: OverlaySettings = overlaySettings(DEFAULT_SETTINGS);
 const [fallbackPing] = pingsFor([DEFAULT_CLICK_PING]);
 const volume = (): number => (settings.muted ? 0 : settings.volume / 100);
@@ -99,6 +102,8 @@ window.overlay.on('ping:spawn', (p) => ping(pingById(p.id) ?? fallbackPing, p.x,
 window.overlay.on('emote:spawn', (p) => emote(p.owner, p.art, p.x, p.y, p.tag));
 window.overlay.on('emote:clear', (p) => stage.clear(p.owner));
 window.overlay.on('toast:show', (t) => showToast(toastLayer, t.title, t.body));
+window.overlay.on('chat:spawn', (p) => chatStage.spawn(p, settings.chat));
+window.overlay.on('chat:clear', () => chatStage.clear());
 
 /** Resolves with `label` when the image at `url` doesn't load. */
 const probe = (url: string, label: string): Promise<string | null> =>

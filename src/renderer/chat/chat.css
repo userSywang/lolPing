@@ -1,0 +1,10 @@
+@import '../overlay/chatBubble.css';
+:root { font-family:'Microsoft YaHei','Segoe UI',sans-serif; color:#34362f; background:#f5f6f2; }
+* { box-sizing:border-box; } body { margin:0; } main { padding:22px; } button,input,textarea,select { font:inherit; } button { cursor:pointer; }
+header { display:flex; justify-content:space-between; align-items:center; } small,footer { color:#757d6d; font-size:11px; line-height:1.8; } h1 { font-size:21px; font-weight:600; margin:7px 0; } .badge { color:#56724d; border:1px solid #ccd8c5; padding:5px 8px; font-size:11px; border-radius:5px; }
+#preview-area { display:flex; justify-content:center; align-items:center; height:160px; overflow:hidden; margin:2px 0 12px; }
+label { display:flex; justify-content:space-between; align-items:center; gap:10px; font-size:12px; margin-bottom:8px; } label span { color:#828778; }
+textarea,select { width:100%; background:#fff; color:inherit; border:1px solid #d3dbce; border-radius:6px; padding:10px; } textarea { resize:vertical; min-height:72px; max-height:180px; font-size:14px; line-height:1.6; }
+.actions { display:flex; justify-content:space-between; gap:10px; margin-top:10px; } button { border:1px solid #d3dbce; border-radius:5px; color:#536c4b; padding:9px 12px; background:#fff; font-size:12px; } .primary { background:#667e5d; color:white; border-color:#667e5d; }
+button:disabled { opacity:.5; cursor:default; } :focus-visible { outline:2px solid #667e5d; outline-offset:3px; }
+#status { min-height:20px; color:#707a65; font-size:12px; line-height:1.6; } details { border-top:1px solid #dce3d7; padding-top:12px; font-size:12px; } summary { cursor:pointer; color:#536c4b; } .preferences { padding-top:18px; } .preferences input[type=range] { width:100%; accent-color:#78906c; margin:0 0 16px; } input[type=color] { width:38px; height:26px; border:0; } select { width:auto; } footer { margin-top:20px; }

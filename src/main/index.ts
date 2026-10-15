@@ -1,4 +1,4 @@
-import { app, clipboard, dialog, Menu, powerMonitor, screen, shell, systemPreferences } from 'electron';
+import { app, clipboard, dialog, globalShortcut, ipcMain, Menu, powerMonitor, screen, shell, systemPreferences } from 'electron';
 import { randomBytes, randomInt } from 'node:crypto';
 import { open } from 'node:fs/promises';
 import { userInfo } from 'node:os';
@@ -18,6 +18,7 @@ import { resolveTarget, toShared } from './displayNumbers';
 import { EmoteLibrary, resolveEmoteArt } from './emoteLibrary';
 import { EmoteCache } from './emoteCache';
 import { EmoteSync } from './emoteSync';
+import { ChatWindow } from './chatWindow';
 import { InputBridge } from './inputBridge';
 import { LanTransport } from './lanTransport';
 import { RELAYS } from './relays';
@@ -151,6 +152,25 @@ async function start(): Promise<void> {
       return target ? { displayId: target.id, width: target.bounds.width, height: target.bounds.height } : null;
     },
   });
+  const chatWindow = new ChatWindow({
+    preferences: () => settings.chat,
+    save: (chat) => { store.update({ chat }); },
+    state: () => ({ members: room.chatMembers(), active: room.state().phase === 'active' }),
+    send: (text) => {
+      const result = room.sendChat(text);
+      if (result.ok) overlays.spawnChat({ text, name: `我 · ${settings.displayName}` });
+      return result;
+    },
+    preview: (text) => overlays.spawnChat({ text, name: '仅本机预览' }),
+    capture: (on) => { capturing = on; bridge.send({ type: 'suspend', on }); },
+  });
+  room.on('remoteChat', (p: { text: string; name: string }) => overlays.spawnChat(p));
+  room.on('sessionReset', () => overlays.clearChat());
+  ipcMain.handle(SETTINGS_CH.chatOpen, (event) => {
+    if (settingsWindow()?.webContents === event.sender) chatWindow.open();
+  });
+  if (!globalShortcut.register('Control+Alt+Return', () => chatWindow.open())) console.warn('[chat] composer shortcut unavailable');
+  if (!globalShortcut.register('Control+Alt+Backspace', () => { chatWindow.close(); overlays.clearChat(); })) console.warn('[chat] hide shortcut unavailable');
   const roomState = (): RoomState => {
     const all = screen.getAllDisplays();
     return {
@@ -208,6 +228,7 @@ async function start(): Promise<void> {
     assetPath('textures', 'generic_ping.png'),
     {
       openSettings: () => openSettingsWindow(),
+      openChat: () => chatWindow.open(),
       setEnabled: (on) => setEnabled(on),
       retryHelper: startHelper,
       quit: () => app.quit(),
@@ -332,6 +353,7 @@ async function start(): Promise<void> {
   function setEnabled(on: boolean): void {
     if (on === enabled) return;
     enabled = on;
+    if (!on) overlays.clearChat();
     bridge.send(configCommand(store.get(), enabled)); // also refreshes the config re-sent after restarts
     const t = text();
     overlays.toast(on ? t.toastOn : t.toastOff, t.toastToggleHint(hotkeyLabel(store.get().toggleHotkey, PLATFORM)));
@@ -371,9 +393,11 @@ async function start(): Promise<void> {
     if (s.displayName !== previous.displayName || s.tagColor !== previous.tagColor) room.profileChanged();
     if (s.autoUpdateCheck !== previous.autoUpdateCheck) updater?.setAutoCheck(s.autoUpdateCheck);
     if (s.roomMuted !== previous.roomMuted) {
+      if (s.roomMuted) overlays.clearChat();
       syncRoomFlags();
       pushRoom();
     }
+    if (!s.chat.enabled) overlays.clearChat();
     if (s.allowInternet !== previous.allowInternet) {
       room.setInternetAllowed(s.allowInternet);
       pushRoom();
@@ -449,6 +473,8 @@ async function start(): Promise<void> {
   app.on('before-quit', (event) => {
     if (quitting) return;
     quitting = true;
+    chatWindow.close();
+    globalShortcut.unregister('Control+Alt+Return'); globalShortcut.unregister('Control+Alt+Backspace');
     event.preventDefault();
     updater?.stop(); // aborts a download and drops a check in flight; an install that is quitting the app is left alone
     room.quit(); // says bye, so the others see "left" instead of waiting for a timeout

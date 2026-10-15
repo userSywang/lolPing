@@ -11,6 +11,7 @@ export interface MacTrayIcons {
 }
 
 export interface TrayHandlers {
+  openChat?(): void;
   openSettings(): void;
   setEnabled(on: boolean): void;
   retryHelper(): void;
@@ -163,6 +164,7 @@ export class AppTray {
     if (failed) items.push({ label: t.trayRestart, click: () => this.handlers.retryHelper() });
     items.push(
       { type: 'separator' },
+      ...(this.handlers.openChat ? [{ label: t.lang === 'zh-CN' ? '桌面悄悄话…' : 'Private room message…', click: () => this.handlers.openChat!() }] : []),
       { label: t.trayRoom, submenu: this.roomMenu() },
       { label: t.traySettings, click: () => this.handlers.openSettings() },
       { label: t.trayQuit, click: () => this.handlers.quit() },

@@ -12,6 +12,7 @@ import { parseRoomCode } from './roomCode';
 import { sanitizeName } from './roomProtocol';
 import { isVersion } from './update';
 import { isValidWheel } from './wheelLayout';
+import { DEFAULT_CHAT, normalizeChat, type ChatPreferences } from './chat';
 
 export type NamedTrigger = 'alt' | 'ctrl' | 'shift' | 'win' | 'capslock' | 'mouse4' | 'mouse5';
 export type TriggerKey = NamedTrigger | { vk: number };
@@ -24,6 +25,7 @@ export const keyboardTriggers = (platform: Platform): NamedTrigger[] =>
   platform === 'mac' ? ['alt', 'ctrl', 'shift', 'win'] : ['alt', 'ctrl', 'shift', 'win', 'capslock'];
 
 export interface Settings {
+  chat: ChatPreferences;
   version: 1;
   enabledOnStart: boolean;
   trigger: TriggerKey;
@@ -78,6 +80,7 @@ export interface Identity {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  chat: { ...DEFAULT_CHAT },
   version: 1,
   enabledOnStart: true,
   trigger: 'alt',
@@ -217,6 +220,7 @@ export function normalizeSettings(raw: unknown, platform: Platform = 'win', iden
   const custom = customEmotes(r.customEmotes);
   return {
     version: 1,
+    chat: normalizeChat(r.chat),
     enabledOnStart: bool(r.enabledOnStart, 'enabledOnStart'),
     trigger: pingTrigger,
     dragThresholdPx: num(r.dragThresholdPx, 'dragThresholdPx'),
@@ -281,10 +285,11 @@ export function triggerLabel(t: TriggerKey, lang: Lang = 'en', platform: Platfor
 export type OverlaySettings = Pick<
   Settings,
   'pingSizePx' | 'pingDurationS' | 'volume' | 'muted' | 'tickSound' | 'wheel' | 'clickPingId'
-  | 'emoteWheel' | 'clickEmoteId' | 'emoteSizePx' | 'emoteSound' | 'customEmotes'
+  | 'emoteWheel' | 'clickEmoteId' | 'emoteSizePx' | 'emoteSound' | 'customEmotes' | 'chat'
 >;
 
 export const overlaySettings = (s: Settings): OverlaySettings => ({
+  chat: { ...s.chat },
   pingSizePx: s.pingSizePx, pingDurationS: s.pingDurationS, volume: s.volume, muted: s.muted, tickSound: s.tickSound,
   wheel: [...s.wheel], clickPingId: s.clickPingId,
   emoteWheel: [...s.emoteWheel], clickEmoteId: s.clickEmoteId, emoteSizePx: s.emoteSizePx, emoteSound: s.emoteSound,

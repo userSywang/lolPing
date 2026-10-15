@@ -1,3 +1,5 @@
+> This report records the original standalone style preview. Native chat integration and revised font-proportional scaling were subsequently verified; see docs/private-chat.md and release/chat-composer-preview.png.
+
 # Long-cat bubble design QA
 
 Source visual truth: docs/chat-bubble/reference.jpg (440 x 336 pixels).

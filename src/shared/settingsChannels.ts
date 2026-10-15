@@ -1,5 +1,6 @@
 /** Channel names for the settings window. Re-exported from ipc.ts; see the note there. */
 export const SETTINGS_CH = {
+  chatOpen: 'chat:open',
   get: 'settings:get',
   set: 'settings:set',
   changed: 'settings:changed',

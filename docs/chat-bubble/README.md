@@ -6,6 +6,6 @@ The reusable presentation component lives in src/renderer/overlay/chatBubble.ts 
 
 Asset: assets/chat/long-cat-frame.png, 2032 x 774 RGBA, generated from the user-provided reference with fixed text and white background removed. The reference copy is reference.jpg. Horizontal border-image slices protect the left 500 and right 350 source pixels. Editable type is rendered separately. This preserves the long-cat style, but it is a generated adaptation rather than an exact extraction.
 
-This change implements the style and interactive preview only. It does not add room chat transport, a native chat input, global shortcuts, persistent chat settings or a new installer. The existing emote-sync installation is unaffected.
+The style is now integrated into the native encrypted room chat in version 0.5.3-privatechat.1. See ../private-chat.md for the composer, shortcuts, persistence and encryption boundary. The standalone web page remains a visual sandbox rather than a real room client.
 
 Verification: TypeScript type check, Vite multi-page build, real in-app browser short/long/100-character states, office/playful presets, dark background, bounded placement and console check. See ../../design-qa.md.

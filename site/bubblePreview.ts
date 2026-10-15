@@ -15,7 +15,10 @@ let lastRandom: { x: number; y: number } | null = null;
 
 function place(randomize = false) {
   const bounds = stage.getBoundingClientRect();
-  const box = mount.getBoundingClientRect();
+  mount.style.transform = 'none';
+  const bubble = mount.firstElementChild as HTMLElement;
+  const scale = Math.min(1, (bounds.width - 24) / bubble.offsetWidth, (bounds.height - 52) / bubble.offsetHeight);
+  const box = { width: bubble.offsetWidth * scale, height: bubble.offsetHeight * scale };
   const minX = 12, minY = 40;
   const maxX = Math.max(minX, bounds.width - box.width - 12);
   const maxY = Math.max(minY, bounds.height - box.height - 12);
@@ -25,7 +28,8 @@ function place(randomize = false) {
     if (randomize || !lastRandom) lastRandom = { x: minX + Math.random() * (maxX - minX), y: minY + Math.random() * (maxY - minY) };
     ({ x, y } = lastRandom);
   }
-  mount.style.transform = 'none';
+  mount.style.transformOrigin = 'top left';
+  mount.style.transform = `scale(${scale})`;
   mount.style.left = `${Math.max(minX, Math.min(maxX, x))}px`;
   mount.style.top = `${Math.max(minY, Math.min(maxY, y))}px`;
 }
