@@ -16,25 +16,26 @@ function job(name: string): string {
 
 describe('release workflow', () => {
   it('creates the release as a draft, and only when none exists for the tag (a re-run keeps working)', () => {
+    expect(workflow).toContain('RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}');
     const create = job('release');
-    expect(create).toMatch(/gh release create "\$GITHUB_REF_NAME"[^\n]*--draft/);
+    expect(create).toMatch(/gh release create "\$RELEASE_TAG"[^\n]*--draft/);
     expect(create).toMatch(/gh release list[^\n]*--json tagName/); // a draft is found by listing, not by `gh release view`
-    expect(create).toMatch(/grep -Fx "\$GITHUB_REF_NAME" > \/dev\/null/); // not -q: grep reads the whole list, so gh never gets a broken pipe
+    expect(create).toMatch(/grep -Fx "\$RELEASE_TAG" > \/dev\/null/); // not -q: grep reads the whole list, so gh never gets a broken pipe
   });
 
   it('uploads the installer, latest.yml and the blockmap from the Windows job, and the disk image from the Mac job', () => {
     const win = job('windows');
-    expect(win).toContain('"release/lolPing-Setup-${GITHUB_REF_NAME#v}.exe"');
+    expect(win).toContain('"release/lolPing-Setup-${RELEASE_TAG#v}.exe"');
     expect(win).toContain('"release/latest.yml"');
-    expect(win).toContain('"release/lolPing-Setup-${GITHUB_REF_NAME#v}.exe.blockmap"');
+    expect(win).toContain('"release/lolPing-Setup-${RELEASE_TAG#v}.exe.blockmap"');
     expect(win).toContain('--clobber');
-    expect(job('mac')).toContain('release/lolPing-${GITHUB_REF_NAME#v}-arm64.dmg');
+    expect(job('mac')).toContain('release/lolPing-${RELEASE_TAG#v}-arm64.dmg');
   });
 
   it('publishes the draft in a last job that waits for both platform jobs', () => {
     const publish = job('publish');
     expect(publish).toMatch(/needs: \[windows, mac\]/);
-    expect(publish).toContain('gh release edit "$GITHUB_REF_NAME" --draft=false');
+    expect(publish).toContain('gh release edit "$RELEASE_TAG" --draft=false');
     expect(publish).toMatch(/GH_REPO: \$\{\{ github\.repository \}\}/); // no checkout in this job, so gh needs to be told the repository
   });
 

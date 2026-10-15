@@ -27,7 +27,7 @@
 
 ## 本项目定制功能与更新
 
-本分支基于 [darrenprx/lolPing](https://github.com/darrenprx/lolPing)，保留原项目 MIT 许可证和署名。当前正式版为 **v0.5.6**，完整更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+本分支基于 [darrenprx/lolPing](https://github.com/darrenprx/lolPing)，保留原项目 MIT 许可证和署名。当前正式版为 **v0.5.7**，完整更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 - 自定义静态表情自动同步给房间好友，修复远端显示问号。
 - **Ctrl+Alt+Enter** 呼出猫猫小气泡输入窗，框内切换随机/固定；Enter 发送、Esc 收起，气泡随字号缩放。
