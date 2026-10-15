@@ -201,7 +201,7 @@ export class RoomManager extends EventEmitter {
     if (this.paused || this.roomMuted) return { ok: false, error: '请先恢复信号并取消房间静音' };
     if (!this.chatMembers()) return { ok: false, error: '还没有支持文字聊天的好友在线，请双方安装新版' };
     if (mode === 'announcement' && ![...this.members.values()].some((m) => m.bulletin && !m.needsUpdate && this.route(m)))
-      return { ok: false, error: '好友需要安装支持固定公告的新版' };
+      return { ok: false, error: '好友需要安装支持固定模式的新版' };
     if (!this.chatOutgoing.allow('self', 1, 2)) return { ok: false, error: '发得有点快，请稍后再试' };
     return this.sendShared({ t: mode === 'announcement' ? 'announcement' : 'chat', text }) ? { ok: true } : { ok: false, error: '暂时没有可用连接，请稍后再试' };
   }

@@ -14,7 +14,7 @@ function paint() {
   bubble.style.color = p.color;
   get('count').textContent = `${[...message.value].length}/100`;
   for (const mode of ['random', 'announcement']) get(mode).setAttribute('aria-pressed', String(preferences.mode === mode));
-  message.placeholder = preferences.mode === 'announcement' ? '更新我的公告…' : '让猫猫说一句…';
+  message.placeholder = '让猫猫说一句...';
 }
 async function send() {
   if (busy || composing) return;

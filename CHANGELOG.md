@@ -3,6 +3,12 @@
 本项目基于 [darrenprx/lolPing](https://github.com/darrenprx/lolPing)，保留原项目 MIT 许可证与署名。
 正式版本从本项目 `main` 分支发布，安装包及更新检查统一使用 [userSywang/lolPing Releases](https://github.com/userSywang/lolPing/releases)。
 
+## [0.5.6] - 2026-10-15
+
+- 小气泡输入窗中的“随机悄悄话”改名为“随机”，“固定公告”改名为“固定”。
+- 两种模式的输入提示统一为“让猫猫说一句...”。
+- 同步更新设置页的模式名称、开关、位置名称和说明文案。
+
 ## [0.5.5] - 2026-10-15
 
 ### 本次更新

@@ -27,7 +27,7 @@ Pings and emotes show up in whole-screen capture, so friends watching your Disco
 
 ## Custom features and releases
 
-This fork is based on [darrenprx/lolPing](https://github.com/darrenprx/lolPing), retaining its MIT license and attribution. The current stable version is **v0.5.5**; see [CHANGELOG.md](CHANGELOG.md) for each custom release.
+This fork is based on [darrenprx/lolPing](https://github.com/darrenprx/lolPing), retaining its MIT license and attribution. The current stable version is **v0.5.6**; see [CHANGELOG.md](CHANGELOG.md) for each custom release.
 
 - Encrypted custom still-image emote synchronization fixes missing images on peers.
 - Ctrl+Alt+Enter opens a compact cat bubble composer with a remembered random-chat/announcement switch; Enter sends and Esc closes.

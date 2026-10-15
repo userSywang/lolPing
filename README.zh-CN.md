@@ -27,10 +27,10 @@
 
 ## 本项目定制功能与更新
 
-本分支基于 [darrenprx/lolPing](https://github.com/darrenprx/lolPing)，保留原项目 MIT 许可证和署名。当前正式版为 **v0.5.5**，完整更新记录见 [CHANGELOG.md](CHANGELOG.md)。
+本分支基于 [darrenprx/lolPing](https://github.com/darrenprx/lolPing)，保留原项目 MIT 许可证和署名。当前正式版为 **v0.5.6**，完整更新记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 - 自定义静态表情自动同步给房间好友，修复远端显示问号。
-- **Ctrl+Alt+Enter** 呼出猫猫小气泡输入窗，框内切换随机悄悄话/固定公告；Enter 发送、Esc 收起，气泡随字号缩放。
+- **Ctrl+Alt+Enter** 呼出猫猫小气泡输入窗，框内切换随机/固定；Enter 发送、Esc 收起，气泡随字号缩放。
 - 公告每人保留自己的最新一句，默认 60 秒消失，自动排列，可与随机悄悄话同时显示。
 - 在 **设置 → 悄悄话** 分别调整两个通道的字号、颜色、透明度、消失时间和位置。**Ctrl+Alt+Backspace** 清除本机所有文字。
 - 正文端到端加密，不保存聊天记录；房间码持有者与接收设备仍可解密。
