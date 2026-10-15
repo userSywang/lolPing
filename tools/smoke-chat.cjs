@@ -33,6 +33,9 @@ setTimeout(async () => {
     const settings = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('/settings/'));
     const overlay = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('/overlay/'));
     if (!settings || !overlay) throw Error('application windows missing');
+    const update = await settings.webContents.executeJavaScript('window.settingsApi.getUpdate()');
+    if (!update) throw Error('installed updater disabled');
+    if (!await settings.webContents.executeJavaScript(`document.body.textContent.includes('userSywang/lolPing')`)) throw Error('update source missing from settings');
     const settingsControls = await settings.webContents.executeJavaScript(`(()=>({channels:document.querySelectorAll('[data-chat-mode]').length,sliders:document.querySelectorAll('[data-chat-mode] input[type=range]').length,defaultDuration:document.querySelector('[data-chat-mode=announcement]')?.textContent.includes('60 秒')}))()`);
     if (settingsControls.channels !== 2 || settingsControls.sliders !== 8 || !settingsControls.defaultDuration) throw Error('independent settings controls missing: '+JSON.stringify(settingsControls));
     await settings.webContents.executeJavaScript(`(()=>{document.querySelector('#chat').scrollIntoView();const slider=document.querySelector('[aria-label="固定公告字号与猫猫大小"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(slider,'21');slider.dispatchEvent(new Event('input',{bubbles:true}));slider.dispatchEvent(new Event('change',{bubbles:true}));})()`); await wait(200);

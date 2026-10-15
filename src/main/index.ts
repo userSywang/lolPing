@@ -103,8 +103,7 @@ async function start(): Promise<void> {
 
   // Updates: only in an installed build, or in a development build pointed at a test server with LOLPING_UPDATE_TEST_URL.
   const testUrl = process.env.LOLPING_UPDATE_TEST_URL || undefined;
-  // This local build must not be replaced by an upstream update that lacks image synchronization.
-  const updater = testUrl ? createUpdater() : null;
+  const updater = app.isPackaged || testUrl ? createUpdater() : null;
   function createUpdater(): Updater {
     const backend = IS_MAC
       ? new MacBackend({

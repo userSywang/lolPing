@@ -8,13 +8,26 @@ on:
 permissions:
   contents: write
 
+env:
+  GH_REPO: ${{ github.repository }}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - name: Check the tag matches package.json
         run: test "v$(node -p "require('./package.json').version")" = "$GITHUB_REF_NAME"
+      - name: Require a main-branch commit and versioned release notes
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          node tools/release-notes.mjs "$GITHUB_REF_NAME" > "$RUNNER_TEMP/lolping-release-notes.md"
       # A draft: installed apps look for latest.yml in the newest published release, so it must not show up before the Windows job has
       # uploaded it (every check would fail with "Cannot find latest.yml" meanwhile). The publish job at the end makes it public.
       # A draft is not found by `gh release view`, so look for the tag in the list. A re-run keeps the release it already has.
@@ -23,7 +36,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release list --limit 200 --json tagName --jq '.[].tagName' | grep -Fx "$GITHUB_REF_NAME" > /dev/null \
-            || gh release create "$GITHUB_REF_NAME" --title "lolPing $GITHUB_REF_NAME" --generate-notes --draft
+            || gh release create "$GITHUB_REF_NAME" --title "lolPing $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/lolping-release-notes.md" --draft
+          gh release edit "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/lolping-release-notes.md"
 
   windows:
     needs: release
@@ -37,8 +51,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
       - run: npm run test:helper
-      - run: npm test
+      - run: npm test -- --maxWorkers=1 --testTimeout=15000
       - run: npm run dist
       - name: Upload the installer and its update files
         shell: bash
@@ -64,8 +79,9 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run typecheck
       - run: npm run test:helper
-      - run: npm test
+      - run: npm test -- --maxWorkers=1 --testTimeout=15000
       - run: npm run dist:mac
       - run: codesign --verify --deep --strict "release/mac-arm64/lolPing.app"
       - name: Upload the disk image

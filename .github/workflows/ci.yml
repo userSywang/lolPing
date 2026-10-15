@@ -21,7 +21,7 @@ jobs:
       - run: npm run typecheck
       # Builds hook-helper.exe and runs the C++ tests. The TypeScript tests need the built helper.
       - run: npm run test:helper
-      - run: npm test
+      - run: npm test -- --maxWorkers=1 --testTimeout=15000
       - run: npm run build
       - run: npm run build:site
 
@@ -37,7 +37,7 @@ jobs:
       - run: npm run typecheck
       # Builds the macOS hook-helper (event tap included) and runs the C++ tests.
       - run: npm run test:helper
-      - run: npm test
+      - run: npm test -- --maxWorkers=1 --testTimeout=15000
       - run: npm run dist:mac
         env:
           # electron-builder skips signing on pull requests. The ad-hoc signature needs no secrets, and an unsigned

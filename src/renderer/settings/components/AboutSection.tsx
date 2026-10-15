@@ -3,6 +3,7 @@ import { ArrowDownload24Regular, ArrowSync24Regular, ErrorCircle24Regular } from
 import { useEffect, useState, type ReactNode } from 'react';
 import type { About } from '../../../shared/ipc';
 import type { UpdateState } from '../../../shared/update';
+import { PROJECT_OWNER, PROJECT_REPO } from '../../../shared/project';
 import { api } from '../api';
 import { useText } from '../text';
 import { checkNote, formatCheckTime } from '../updateView';
@@ -29,6 +30,7 @@ export function AboutSection({ icon, update }: { icon: ReactNode; update: Update
         description={(
           <>
             {t.aboutDesc(about.version)}
+            <span className="desc">{t.lang === 'zh-CN' ? '更新来源' : 'Update source'}: {PROJECT_OWNER}/{PROJECT_REPO} · {t.lang === 'zh-CN' ? '正式发布版' : 'stable releases'}</span>
             {note ? <span className="desc">{note}</span> : null}
           </>
         )}>

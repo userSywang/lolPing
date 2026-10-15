@@ -7,11 +7,11 @@ import { pingById, type PingId } from '../shared/pings';
 import type { Platform } from '../shared/platform';
 import type { JoinResult, RoomState } from '../shared/room';
 import { patchClashes, rendererPatch } from '../shared/settings';
+import { PROJECT_URL } from '../shared/project';
 import type { UpdateState } from '../shared/update';
 import { emoteFileFrom, type EmoteLibrary } from './emoteLibrary';
 import type { SettingsStore } from './settingsStore';
 
-const PROJECT_URL = 'https://github.com/darrenprx/lolPing';
 /** Where "What's new" goes when no update is known. */
 export const LATEST_RELEASE_URL = `${PROJECT_URL}/releases/latest`;
 

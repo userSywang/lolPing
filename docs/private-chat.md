@@ -1,5 +1,7 @@
 # 0.5.4 更新
 
+自 0.5.5 起已恢复本项目正式 Release 更新检查；当前更新源及发布流程见 [releases-and-updates.md](releases-and-updates.md)。
+
 输入与设置已分离，新增独立公告通道。当前交互、兼容性和默认值以 [chat-modes.md](chat-modes.md) 为准；下文保留加密设计与 0.5.3 初版背景。
 
 # Desktop private chat — 0.5.3-privatechat.1

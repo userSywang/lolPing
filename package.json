@@ -1,14 +1,14 @@
 {
   "name": "lolping",
   "productName": "lolPing",
-  "version": "0.5.4-chatmodes.1",
+  "version": "0.5.5",
   "private": true,
   "description": "League of Legends style ping wheel for your Windows and macOS desktop",
   "author": "Danrui Meng (https://github.com/darrenprx)",
   "license": "MIT",
-  "homepage": "https://github.com/darrenprx/lolPing#readme",
-  "repository": { "type": "git", "url": "https://github.com/darrenprx/lolPing.git" },
-  "bugs": "https://github.com/darrenprx/lolPing/issues",
+  "homepage": "https://github.com/userSywang/lolPing#readme",
+  "repository": { "type": "git", "url": "https://github.com/userSywang/lolPing.git" },
+  "bugs": "https://github.com/userSywang/lolPing/issues",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -79,6 +79,6 @@
       }
     },
     "dmg": { "artifactName": "lolPing-${version}-arm64.dmg" },
-    "publish": [{ "provider": "github", "owner": "darrenprx", "repo": "lolPing" }]
+    "publish": [{ "provider": "github", "owner": "userSywang", "repo": "lolPing" }]
   }
 }
