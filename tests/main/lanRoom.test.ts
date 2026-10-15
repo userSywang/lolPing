@@ -46,6 +46,25 @@ afterEach(() => {
 });
 
 describe('two rooms over loopback UDP', () => {
+  it('exchanges Chinese text over real encrypted UDP without leaking it in captured packets', async () => {
+    const a = peer(A_PORT, B_PORT, 'Alice'), b = peer(B_PORT, A_PORT, 'Bob');
+    open = [a, b];
+    const messages: Array<{ text: string; name: string }> = [];
+    const packets: Uint8Array[] = [];
+    b.room.on('remoteChat', (p) => messages.push(p));
+    b.lan.on('packet', (_key, packet) => packets.push(packet));
+    await Promise.all([a.room.join(CODE), b.room.join(CODE)]);
+    await until(() => a.room.state().phase === 'active' && b.room.state().phase === 'active' && a.room.chatMembers() === 1);
+    expect(a.room.sendChat('今天午饭吃什么？猫猫想吃鱼。')).toEqual({ ok: true });
+    await until(() => messages.length === 1);
+    expect(messages[0]).toMatchObject({ name: 'Alice', text: '今天午饭吃什么？猫猫想吃鱼。' });
+    expect(packets.length).toBeGreaterThan(0);
+    expect(packets.every((p) => !Buffer.from(p).includes(Buffer.from('今天午饭吃什么')))).toBe(true);
+    b.room.setStatusFlags({ paused: false, roomMuted: true });
+    a.room.sendChat('不应该显示的消息');
+    await new Promise((r) => setTimeout(r, 60));
+    expect(messages).toHaveLength(1);
+  });
   it('find each other, exchange pings, survive a rebind and see a leave', async () => {
     const a = peer(A_PORT, B_PORT, 'Alice');
     const b = peer(B_PORT, A_PORT, 'Bob');

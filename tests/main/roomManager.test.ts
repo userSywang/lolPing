@@ -806,3 +806,39 @@ describe('custom image transport', () => {
     expect(room.sendEmoteAsset(alex.peer, { t: 'emoteRequest', e: ref, i: 0 })).toBe(false);
   });
 });
+
+describe('private text messages', () => {
+  it('sends encrypted text only when a capable peer is online and rate limits outgoing messages', async () => {
+    await joinActive();
+    expect(room.sendChat('你好').ok).toBe(false);
+    const alex = new Remote('1111111111111111', 'lan:a', lan);
+    alex.presence({ chat: 1 });
+    expect(room.chatMembers()).toBe(1);
+    expect(room.sendChat('这是一句悄悄话')).toEqual({ ok: true });
+    const packet = lan.sent.at(-1)!.packet;
+    expect(Buffer.from(packet).includes(Buffer.from('这是一句悄悄话'))).toBe(false);
+    expect(decodeMessage(open(KEYS.msgKey, packet)!)).toMatchObject({ t: 'chat', text: '这是一句悄悄话' });
+    expect(room.sendChat('第二句').ok).toBe(true);
+    expect(room.sendChat('太快了').ok).toBe(false);
+    room.leave(); expect(room.sendChat('离开后').ok).toBe(false);
+  });
+  it('honors room/member mute, pause, capability, replay protection and receive budgets', async () => {
+    await joinActive();
+    const alex = new Remote('1111111111111111', 'lan:a', lan);
+    alex.presence({ chat: 1 });
+    const receive = vi.fn(); room.on('remoteChat', receive);
+    const packet = alex.packet({ t: 'chat', text: '午饭吃啥' });
+    lan.deliver(alex.key, packet); lan.deliver(alex.key, packet);
+    expect(receive).toHaveBeenCalledTimes(1);
+    expect(receive).toHaveBeenLastCalledWith({ peer: alex.peer, name: 'P1', text: '午饭吃啥' });
+    room.muteMember(alex.peer, true); lan.deliver(alex.key, alex.packet({ t: 'chat', text: '屏蔽' }));
+    expect(receive).toHaveBeenCalledTimes(1);
+    room.muteMember(alex.peer, false); room.setStatusFlags({ paused: true, roomMuted: false });
+    lan.deliver(alex.key, alex.packet({ t: 'chat', text: '暂停' })); expect(receive).toHaveBeenCalledTimes(1);
+    room.setStatusFlags({ paused: false, roomMuted: true });
+    lan.deliver(alex.key, alex.packet({ t: 'chat', text: '静音' })); expect(receive).toHaveBeenCalledTimes(1);
+    room.setStatusFlags({ paused: false, roomMuted: false });
+    for (let i=0; i<10; i++) lan.deliver(alex.key, alex.packet({ t: 'chat', text: '限频' }));
+    expect(receive).toHaveBeenCalledTimes(3);
+  });
+});

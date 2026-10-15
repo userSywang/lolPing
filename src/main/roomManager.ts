@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { chatText, type ChatSendResult } from '../shared/chat';
 import type { EmoteRef } from '../shared/emotes';
 import type { PingId } from '../shared/pings';
 import type { JoinResult, MemberPath, RoomMember, RoomStateCore } from '../shared/room';
@@ -80,6 +81,7 @@ interface Member {
   needsUpdate: boolean;
   noEmotes: boolean;
   emoteSync: boolean;
+  chat: boolean;
   muted: boolean;
   firstSeen: number;
   /** Ever heard over the internet: dropped after the longer silence. */
@@ -129,6 +131,8 @@ export class RoomManager extends EventEmitter {
   private readonly relayCap: RateLimiter;
   private readonly assetReceiveCap: RateLimiter;
   private readonly assetSendCap: RateLimiter;
+  private readonly chatCap = new RateLimiter(() => this.deps.now());
+  private readonly chatOutgoing = new RateLimiter(() => this.deps.now());
   /** A presence waiting out SHARED_PRESENCE_MS, per shared transport. */
   private readonly sharedTimers = new Map<Transport, NodeJS.Timeout>();
 
@@ -187,6 +191,18 @@ export class RoomManager extends EventEmitter {
     return this.members.get(peer)?.emoteSync === true;
   }
 
+  chatMembers(): number { return [...this.members.values()].filter((m) => m.chat && !m.needsUpdate && this.route(m)).length; }
+
+  sendChat(raw: unknown): ChatSendResult {
+    const text = chatText(raw);
+    if (!text) return { ok: false, error: '请输入 1–100 个字符' };
+    if (this.phase !== 'active' || !this.keys) return { ok: false, error: '请先加入房间，等待连接完成' };
+    if (this.paused || this.roomMuted) return { ok: false, error: '请先恢复信号并取消房间静音' };
+    if (!this.chatMembers()) return { ok: false, error: '还没有支持文字聊天的好友在线，请双方安装新版' };
+    if (!this.chatOutgoing.allow('self', 1, 2)) return { ok: false, error: '发得有点快，请稍后再试' };
+    return this.sendShared({ t: 'chat', text }) ? { ok: true } : { ok: false, error: '暂时没有可用连接，请稍后再试' };
+  }
+
   /** Image traffic uses a separate, smaller budget and the existing relay cap; all packets remain encrypted. */
   sendEmoteAsset(peer: string, body: EmoteAssetBody): boolean {
     const m = this.members.get(peer);
@@ -204,17 +220,19 @@ export class RoomManager extends EventEmitter {
   }
 
   /** A ping or an emote: each member gets it over its own route; shared transports get one send, within the relay cap. */
-  private sendShared(body: Record<string, unknown>): void {
-    if (this.phase === 'idle' || !this.keys || this.paused) return;
+  private sendShared(body: Record<string, unknown>): boolean {
+    if (this.phase === 'idle' || !this.keys || this.paused) return false;
+    let sent = false;
     const packet = this.seal(body);
     const sharedRoutes = new Set<Transport>();
     for (const m of this.members.values()) {
       const route = this.route(m);
       if (!route) continue;
       if (route.transport.shared) sharedRoutes.add(route.transport);
-      else route.transport.sendTo(route.key, packet);
+      else { route.transport.sendTo(route.key, packet); sent = true; }
     }
-    for (const t of sharedRoutes) if (this.relayCap.allow(t.kind, RELAY_PING_RATE, RELAY_PING_BURST)) t.broadcast(packet);
+    for (const t of sharedRoutes) if (this.relayCap.allow(t.kind, RELAY_PING_RATE, RELAY_PING_BURST)) { t.broadcast(packet); sent = true; }
+    return sent;
   }
 
   setStatusFlags(f: { paused: boolean; roomMuted: boolean }): void {
@@ -368,6 +386,7 @@ export class RoomManager extends EventEmitter {
     this.staleStrikes.clear();
     this.lastPresence = {};
     this.assetReceiveCap.clear(); this.assetSendCap.clear();
+    this.chatCap.clear(); this.chatOutgoing.clear();
     this.emit('sessionReset');
     this.aloneSince = null;
     this.emitState();
@@ -409,6 +428,11 @@ export class RoomManager extends EventEmitter {
     this.heard(m, t, key);
     // Pings and emotes pass the same gates and share one budget per member.
     if (this.paused || this.roomMuted || m.muted || m.needsUpdate) return;
+    if (msg.t === 'chat') {
+      if (m.chat && this.chatCap.allow(m.peer, 1, 3) && this.limiter.allow(m.peer, this.deps.profile().limit))
+        this.emit('remoteChat', { peer: m.peer, text: msg.text, name: m.name });
+      return;
+    }
     if (msg.t === 'emoteRequest' || msg.t === 'emoteChunk') {
       if (msg.to !== this.self || !m.emoteSync) return;
       if (!this.assetReceiveCap.allow(m.peer, 12, 16) || !this.assetReceiveCap.allow('all', 48, 64)) return;
@@ -429,7 +453,7 @@ export class RoomManager extends EventEmitter {
     const isNew = !m;
     if (!m) {
       m = {
-        peer: msg.peer, name: msg.name, color: msg.color, status: msg.status, needsUpdate: false, noEmotes: false, emoteSync: false, muted: false,
+        peer: msg.peer, name: msg.name, color: msg.color, status: msg.status, needsUpdate: false, noEmotes: false, emoteSync: false, chat: false, muted: false,
         firstSeen: this.deps.now(), viaInternet: false, paths: {},
       };
       this.members.set(m.peer, m);
@@ -441,6 +465,7 @@ export class RoomManager extends EventEmitter {
     m.needsUpdate = msg.proto !== PROTOCOL_VERSION;
     m.noEmotes = isOlderThan(msg.app, EMOTES_SINCE);
     m.emoteSync = msg.emoteSync === 1;
+    m.chat = msg.chat === 1;
     this.heard(m, t, key);
     if (!this.answered.has(key)) {
       this.answered.add(key);
@@ -477,6 +502,7 @@ export class RoomManager extends EventEmitter {
     this.members.delete(m.peer);
     this.limiter.forget(m.peer);
     this.assetReceiveCap.forget(m.peer);
+    this.chatCap.forget(m.peer);
     for (const p of Object.values(m.paths)) this.answered.delete(p.key);
     if (this.members.size === 0 && this.phase !== 'idle') this.aloneSince = this.deps.now();
     this.emit('toast', { kind, name: m.name } satisfies RoomToast);
@@ -506,7 +532,7 @@ export class RoomManager extends EventEmitter {
 
   private presencePacket(): Buffer {
     const p = this.deps.profile();
-    return this.seal({ t: 'presence', proto: PROTOCOL_VERSION, app: this.deps.appVersion, name: p.name, color: p.color, status: this.status(), emoteSync: 1 });
+    return this.seal({ t: 'presence', proto: PROTOCOL_VERSION, app: this.deps.appVersion, name: p.name, color: p.color, status: this.status(), emoteSync: 1, chat: 1 });
   }
 
   /**
