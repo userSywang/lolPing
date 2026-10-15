@@ -37,6 +37,10 @@ it('a relay sees signed ciphertext events while two clients exchange Chinese tex
     expect(rooms[0].chatMembers()).toBe(1);
     expect(rooms[0].sendChat('偷偷告诉你：午饭吃鱼')).toEqual({ ok: true });
     expect(receive).toHaveBeenCalledWith(expect.objectContaining({ text: '偷偷告诉你：午饭吃鱼' }));
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(rooms[0].sendChat('今日公告：六点下班', 'announcement')).toEqual({ ok: true });
+    expect(receive).toHaveBeenCalledWith(expect.objectContaining({ text: '今日公告：六点下班', mode: 'announcement' }));
+    expect(serverEvents.some((e) => Buffer.from(JSON.parse(e)[1].content, 'base64').includes(Buffer.from('今日公告')))).toBe(false);
     expect(serverEvents.some((e) => e.includes('偷偷告诉你'))).toBe(false);
     expect(serverEvents.some((e) => e.includes(code))).toBe(false);
     for (const frame of serverEvents) {

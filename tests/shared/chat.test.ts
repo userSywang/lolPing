@@ -28,6 +28,15 @@ describe('private room text', () => {
   it('normalizes local display choices independently of incoming messages', () => {
     expect(normalizeChat(null)).toEqual(DEFAULT_CHAT);
     expect(normalizeChat({ fontSize: 200, opacity: -1, x: -5, y: 8, color: 'url(evil)', position: 'unknown' }))
-      .toMatchObject({ fontSize: 32, opacity: .3, x: 0, y: 1, color: DEFAULT_CHAT.color, position: 'fixed' });
+      .toMatchObject({ fontSize: 32, opacity: .3, x: 0, y: 1, color: DEFAULT_CHAT.color, position: 'random' });
+  });
+  it('keeps independent announcement preferences and encrypts announcement packets', () => {
+    expect(normalizeChat({ duration: 4, announcement: { duration: 9999, fontSize: 16, position: 'random' }, mode: 'announcement' }))
+      .toMatchObject({ duration: 4, mode: 'announcement', announcement: { duration: 600, fontSize: 16, position: 'fixed' } });
+    expect(normalizeChat({ position: 'fixed' }).announcement.duration).toBe(60);
+    const msg = { ...base, t: 'announcement' as const, text: '我的公告' };
+    const packet = seal(Buffer.alloc(32, 7), encodeMessage(msg));
+    expect(packet.includes(Buffer.from(msg.text))).toBe(false);
+    expect(decodeMessage(open(Buffer.alloc(32, 7), packet)!)).toEqual(msg);
   });
 });

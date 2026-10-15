@@ -80,7 +80,7 @@ export interface Identity {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  chat: { ...DEFAULT_CHAT },
+  chat: { ...DEFAULT_CHAT, announcement: { ...DEFAULT_CHAT.announcement } },
   version: 1,
   enabledOnStart: true,
   trigger: 'alt',
@@ -289,7 +289,7 @@ export type OverlaySettings = Pick<
 >;
 
 export const overlaySettings = (s: Settings): OverlaySettings => ({
-  chat: { ...s.chat },
+  chat: { ...s.chat, announcement: { ...s.chat.announcement } },
   pingSizePx: s.pingSizePx, pingDurationS: s.pingDurationS, volume: s.volume, muted: s.muted, tickSound: s.tickSound,
   wheel: [...s.wheel], clickPingId: s.clickPingId,
   emoteWheel: [...s.emoteWheel], clickEmoteId: s.clickEmoteId, emoteSizePx: s.emoteSizePx, emoteSound: s.emoteSound,

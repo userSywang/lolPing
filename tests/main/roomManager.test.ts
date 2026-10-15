@@ -808,6 +808,20 @@ describe('custom image transport', () => {
 });
 
 describe('private text messages', () => {
+  it('uses a separate announcement type and requires announcement capability', async () => {
+    await joinActive();
+    const alex = new Remote('1111111111111111', 'lan:a', lan);
+    alex.presence({ chat: 1 });
+    expect(room.sendChat('公告', 'announcement').ok).toBe(false);
+    const receive = vi.fn(); room.on('remoteChat', receive);
+    lan.deliver(alex.key, alex.packet({ t: 'announcement', text: '旧版不能冒充公告' }));
+    expect(receive).not.toHaveBeenCalled();
+    alex.presence({ chat: 1, bulletin: 1 });
+    expect(room.sendChat('我的公告', 'announcement')).toEqual({ ok: true });
+    expect(decodeMessage(open(KEYS.msgKey, lan.sent.at(-1)!.packet)!)).toMatchObject({ t: 'announcement', text: '我的公告' });
+    lan.deliver(alex.key, alex.packet({ t: 'announcement', text: '好友公告' }));
+    expect(receive).toHaveBeenCalledWith({ peer: alex.peer, name: 'P1', text: '好友公告', mode: 'announcement' });
+  });
   it('sends encrypted text only when a capable peer is online and rate limits outgoing messages', async () => {
     await joinActive();
     expect(room.sendChat('你好').ok).toBe(false);
@@ -830,7 +844,7 @@ describe('private text messages', () => {
     const packet = alex.packet({ t: 'chat', text: '午饭吃啥' });
     lan.deliver(alex.key, packet); lan.deliver(alex.key, packet);
     expect(receive).toHaveBeenCalledTimes(1);
-    expect(receive).toHaveBeenLastCalledWith({ peer: alex.peer, name: 'P1', text: '午饭吃啥' });
+    expect(receive).toHaveBeenLastCalledWith({ peer: alex.peer, name: 'P1', text: '午饭吃啥', mode: 'random' });
     room.muteMember(alex.peer, true); lan.deliver(alex.key, alex.packet({ t: 'chat', text: '屏蔽' }));
     expect(receive).toHaveBeenCalledTimes(1);
     room.muteMember(alex.peer, false); room.setStatusFlags({ paused: true, roomMuted: false });

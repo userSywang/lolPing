@@ -156,15 +156,15 @@ async function start(): Promise<void> {
     preferences: () => settings.chat,
     save: (chat) => { store.update({ chat }); },
     state: () => ({ members: room.chatMembers(), active: room.state().phase === 'active' }),
-    send: (text) => {
-      const result = room.sendChat(text);
-      if (result.ok) overlays.spawnChat({ text, name: `我 · ${settings.displayName}` });
+    send: (text, mode) => {
+      const result = room.sendChat(text, mode);
+      if (result.ok) overlays.spawnChat({ text, name: `我 · ${settings.displayName}`, peer: 'self', mode });
       return result;
     },
-    preview: (text) => overlays.spawnChat({ text, name: '仅本机预览' }),
+    preview: (text, mode) => overlays.spawnChat({ text, name: '仅本机预览', peer: 'preview', mode }),
     capture: (on) => { capturing = on; bridge.send({ type: 'suspend', on }); },
   });
-  room.on('remoteChat', (p: { text: string; name: string }) => overlays.spawnChat(p));
+  room.on('remoteChat', (p) => overlays.spawnChat(p));
   room.on('sessionReset', () => overlays.clearChat());
   ipcMain.handle(SETTINGS_CH.chatOpen, (event) => {
     if (settingsWindow()?.webContents === event.sender) chatWindow.open();
@@ -397,7 +397,7 @@ async function start(): Promise<void> {
       syncRoomFlags();
       pushRoom();
     }
-    if (!s.chat.enabled) overlays.clearChat();
+    if (!s.chat.enabled && !s.chat.announcement.enabled) overlays.clearChat();
     if (s.allowInternet !== previous.allowInternet) {
       room.setInternetAllowed(s.allowInternet);
       pushRoom();

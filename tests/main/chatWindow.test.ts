@@ -7,6 +7,8 @@ vi.mock('electron', async () => {
     webContents = Object.assign(new EventEmitter(), { setWindowOpenHandler: vi.fn() });
     constructor(public options: unknown) { super(); state.windows.push(this); }
     removeMenu() {} show() {} focus() {} destroy() { this.emit('closed'); }
+    getBounds() { return { x: 0, y: 0, width: 486, height: 240 }; }
+    setBounds() {}
   }
   return { BrowserWindow: Window, ipcMain: { handle: (c: string, fn: (...args: any[]) => any) => state.handlers.set(c, fn),
     on: (c: string, fn: (...args: any[]) => any) => state.handlers.set(c, fn) },
@@ -25,10 +27,14 @@ describe('composer security boundary', () => {
     expect(send).not.toHaveBeenCalled();
     expect(state.handlers.get(CHAT_CH.send)!({ sender }, '猫'.repeat(101))).toMatchObject({ ok: false });
     expect(send).not.toHaveBeenCalled();
-    state.handlers.get(CHAT_CH.send)!({ sender }, '秘密'); expect(send).toHaveBeenCalledWith('秘密');
+    state.handlers.get(CHAT_CH.send)!({ sender }, '秘密'); expect(send).toHaveBeenCalledWith('秘密', 'random');
+    state.handlers.get(CHAT_CH.send)!({ sender }, '我的公告', 'announcement'); expect(send).toHaveBeenLastCalledWith('我的公告', 'announcement');
+    expect(state.handlers.get(CHAT_CH.send)!({ sender }, '错误通道', 'evil')).toMatchObject({ ok: false });
     state.handlers.get(CHAT_CH.preferences)!({ sender }, { fontSize: 10000, opacity: 0, color: 'javascript:evil' });
     expect(save).toHaveBeenCalledWith(expect.objectContaining({ fontSize: 32, opacity: .3, color: DEFAULT_CHAT.color }));
     expect(state.windows[0].options.webPreferences).toMatchObject({ sandbox: true, contextIsolation: true, nodeIntegration: false, spellcheck: false });
+    expect(state.windows[0].options).toMatchObject({ frame: false, transparent: true, resizable: false });
+    expect(state.windows[0].options.height).toBeLessThan(300);
   });
   it('blocks navigation away from the local input page, denies popup windows and releases capture on close', () => {
     const capture = vi.fn();

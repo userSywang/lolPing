@@ -1,3 +1,13 @@
+# 0.5.4 双通道界面验收
+
+- 大页面已改为透明猫猫输入小窗；默认 486×240，随字号变化。输入区、模式切换、发送和关闭全部可见。
+- 设置页直接展示两个独立通道及 8 个滑块，实际改变公告字号并确认设置保存。
+- 验证按发送者替换，两个公告与随机消息同时存在；公告真实边界不重叠，随机消息先消失，公告独立到时清除。
+- 新增小屏幕排列测试：8 位发送者全部在屏内显示，不因空间不足隐藏。
+- 12/32 px 字号对应猫猫高度 77/205.328 px，保持等比缩放；中文输入法确认选字不误发送，草稿不写入配置。
+- 实际 Electron 测试使用独立配置；旧安装占用默认快捷键时使用临时测试键验证注册，未关闭用户程序。
+- 最终全量回归 742 项、51 个测试文件通过，包含小屏幕排列、快速切换通道和窗口边界检查。真实 UDP 和加密中继公告往返通过。
+
 > This report records the original standalone style preview. Native chat integration and revised font-proportional scaling were subsequently verified; see docs/private-chat.md and release/chat-composer-preview.png.
 
 # Long-cat bubble design QA

@@ -1,3 +1,7 @@
+# 0.5.4 更新
+
+输入与设置已分离，新增独立公告通道。当前交互、兼容性和默认值以 [chat-modes.md](chat-modes.md) 为准；下文保留加密设计与 0.5.3 初版背景。
+
 # Desktop private chat — 0.5.3-privatechat.1
 
 The native composer opens from Settings > 悄悄话, the tray menu, or Ctrl+Alt+Enter. It has a sandboxed, isolated preload exposing only five chat operations. Main-process handlers check sender WebContents identity, validate text and normalize preferences. Popup windows and navigation away from the packaged chat page are blocked. IME composition/229 confirmations do not submit. Enter sends, Shift+Enter inserts a newline and Esc destroys the draft window. The input helper is suspended while the composer has focus and resumed on blur/close. Ctrl+Alt+Backspace destroys the composer and clears text overlays. If a global shortcut is occupied, the tray/settings entry remains available.

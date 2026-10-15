@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { chatText, type ChatSendResult } from '../shared/chat';
+import { chatText, type ChatMode, type ChatSendResult } from '../shared/chat';
 import type { EmoteRef } from '../shared/emotes';
 import type { PingId } from '../shared/pings';
 import type { JoinResult, MemberPath, RoomMember, RoomStateCore } from '../shared/room';
@@ -82,6 +82,7 @@ interface Member {
   noEmotes: boolean;
   emoteSync: boolean;
   chat: boolean;
+  bulletin?: boolean;
   muted: boolean;
   firstSeen: number;
   /** Ever heard over the internet: dropped after the longer silence. */
@@ -193,14 +194,16 @@ export class RoomManager extends EventEmitter {
 
   chatMembers(): number { return [...this.members.values()].filter((m) => m.chat && !m.needsUpdate && this.route(m)).length; }
 
-  sendChat(raw: unknown): ChatSendResult {
+  sendChat(raw: unknown, mode: ChatMode = 'random'): ChatSendResult {
     const text = chatText(raw);
     if (!text) return { ok: false, error: '请输入 1–100 个字符' };
     if (this.phase !== 'active' || !this.keys) return { ok: false, error: '请先加入房间，等待连接完成' };
     if (this.paused || this.roomMuted) return { ok: false, error: '请先恢复信号并取消房间静音' };
     if (!this.chatMembers()) return { ok: false, error: '还没有支持文字聊天的好友在线，请双方安装新版' };
+    if (mode === 'announcement' && ![...this.members.values()].some((m) => m.bulletin && !m.needsUpdate && this.route(m)))
+      return { ok: false, error: '好友需要安装支持固定公告的新版' };
     if (!this.chatOutgoing.allow('self', 1, 2)) return { ok: false, error: '发得有点快，请稍后再试' };
-    return this.sendShared({ t: 'chat', text }) ? { ok: true } : { ok: false, error: '暂时没有可用连接，请稍后再试' };
+    return this.sendShared({ t: mode === 'announcement' ? 'announcement' : 'chat', text }) ? { ok: true } : { ok: false, error: '暂时没有可用连接，请稍后再试' };
   }
 
   /** Image traffic uses a separate, smaller budget and the existing relay cap; all packets remain encrypted. */
@@ -428,9 +431,9 @@ export class RoomManager extends EventEmitter {
     this.heard(m, t, key);
     // Pings and emotes pass the same gates and share one budget per member.
     if (this.paused || this.roomMuted || m.muted || m.needsUpdate) return;
-    if (msg.t === 'chat') {
-      if (m.chat && this.chatCap.allow(m.peer, 1, 3) && this.limiter.allow(m.peer, this.deps.profile().limit))
-        this.emit('remoteChat', { peer: m.peer, text: msg.text, name: m.name });
+    if (msg.t === 'chat' || msg.t === 'announcement') {
+      if (m.chat && (msg.t !== 'announcement' || m.bulletin) && this.chatCap.allow(m.peer, 1, 3) && this.limiter.allow(m.peer, this.deps.profile().limit))
+        this.emit('remoteChat', { peer: m.peer, text: msg.text, name: m.name, mode: msg.t === 'announcement' ? 'announcement' : 'random' });
       return;
     }
     if (msg.t === 'emoteRequest' || msg.t === 'emoteChunk') {
@@ -466,6 +469,7 @@ export class RoomManager extends EventEmitter {
     m.noEmotes = isOlderThan(msg.app, EMOTES_SINCE);
     m.emoteSync = msg.emoteSync === 1;
     m.chat = msg.chat === 1;
+    m.bulletin = msg.bulletin === 1;
     this.heard(m, t, key);
     if (!this.answered.has(key)) {
       this.answered.add(key);
@@ -532,7 +536,7 @@ export class RoomManager extends EventEmitter {
 
   private presencePacket(): Buffer {
     const p = this.deps.profile();
-    return this.seal({ t: 'presence', proto: PROTOCOL_VERSION, app: this.deps.appVersion, name: p.name, color: p.color, status: this.status(), emoteSync: 1, chat: 1 });
+    return this.seal({ t: 'presence', proto: PROTOCOL_VERSION, app: this.deps.appVersion, name: p.name, color: p.color, status: this.status(), emoteSync: 1, chat: 1, bulletin: 1 });
   }
 
   /**

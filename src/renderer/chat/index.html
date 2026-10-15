@@ -1,20 +1,5 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self' lolping:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' lolping: data:; connect-src 'self' lolping:"><title>桌面悄悄话</title></head><body><main>
-<header><div><small>lolPing / 房间文字</small><h1>桌面悄悄话</h1></div><span class="badge">端到端加密</span></header>
-<div id="preview-area" aria-label="猫猫样式预览"></div>
-<label for="message">让猫猫说什么 <span id="count">0 / 100</span></label>
-<textarea id="message" rows="3" autocomplete="off" spellcheck="false" placeholder="输入一句悄悄话…"></textarea>
-<div class="actions"><button type="button" id="preview">只在本机预览</button><button type="button" class="primary" id="send">发送并收起</button></div>
-<p id="status" role="status"></p>
-<details><summary>气泡外观与位置</summary><div class="preferences">
-<label for="enabled">接收文字气泡<input type="checkbox" id="enabled" checked></label>
-<label for="size">字号与猫猫大小 <span id="size-value">24 px</span></label><input id="size" type="range" min="12" max="32" value="24">
-<label for="color">文字颜色<input id="color" type="color" value="#201b16"></label>
-<label for="opacity">透明度 <span id="opacity-value">100%</span></label><input id="opacity" type="range" min="30" max="100" value="100">
-<label for="duration">停留时间 <span id="duration-value">6 秒</span></label><input id="duration" type="range" min="3" max="15" value="6">
-<label for="position">出现位置<select id="position"><option value="fixed">固定位置</option><option value="mouse">我的鼠标附近</option><option value="random">屏幕内随机</option></select></label>
-<label for="x">固定位置 · 左右</label><input id="x" type="range" min="0" max="100" value="95">
-<label for="y">固定位置 · 上下</label><input id="y" type="range" min="0" max="100" value="90">
-<div class="actions"><button type="button" id="office">低调摸鱼</button><button type="button" id="playful">俏皮一点</button></div>
-</div></details>
-<footer>Enter 发送 · Shift+Enter 换行 · Esc 取消<br>Ctrl+Alt+Enter 打开输入 · Ctrl+Alt+Backspace 立即隐藏<br>正文仅在房间成员设备上解密，不保存聊天记录。房间码请只分享给可信的人。</footer>
+<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'self' lolping:; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' lolping: data:; connect-src 'self' lolping:"><title>气泡输入</title></head><body><main>
+<div class="toolbar"><div class="modes" role="group" aria-label="消息通道"><button id="random" aria-pressed="true">随机悄悄话</button><button id="announcement" aria-pressed="false">固定公告</button></div><button id="close" aria-label="关闭">×</button></div>
+<div class="cat-bubble" id="input-bubble"><textarea id="message" rows="2" autocomplete="off" spellcheck="false" aria-label="输入消息" placeholder="让猫猫说一句…"></textarea></div>
+<div class="bottom"><span id="status" role="status">Enter 发送 · Esc 收起</span><span id="count">0/100</span><button id="send">发送 ↵</button></div>
 </main><script type="module" src="./main.ts"></script></body></html>

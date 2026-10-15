@@ -150,10 +150,11 @@ export class OverlayManager extends EventEmitter {
     this.send(screen.getPrimaryDisplay().id, 'toast:show', { title, body });
   }
 
-  spawnChat(message: { text: string; name: string }): void {
-    if (!this.settings.chat.enabled) return;
+  spawnChat(message: { text: string; name: string; peer: string; mode: 'random' | 'announcement' }): void {
+    const p = message.mode === 'announcement' ? this.settings.chat.announcement : this.settings.chat;
+    if (!p.enabled) return;
     const cursor = screen.getCursorScreenPoint();
-    const d = this.settings.chat.position === 'mouse' ? screen.getDisplayNearestPoint(cursor) : screen.getPrimaryDisplay();
+    const d = p.position === 'mouse' ? screen.getDisplayNearestPoint(cursor) : screen.getPrimaryDisplay();
     this.send(d.id, 'chat:spawn', { ...message, x: cursor.x - d.bounds.x, y: cursor.y - d.bounds.y });
   }
   clearChat(): void { for (const id of this.windows.keys()) this.send(id, 'chat:clear', null); }

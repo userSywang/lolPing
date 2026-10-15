@@ -19,7 +19,7 @@ export interface PingTag {
 
 /** main → overlay renderer messages. Points are CSS pixels inside that overlay. */
 export interface OverlayEvents {
-  'chat:spawn': Point & { text: string; name: string };
+  'chat:spawn': Point & { text: string; name: string; peer: string; mode: 'random' | 'announcement' };
   'chat:clear': null;
   'overlay:settings': OverlaySettings;
   /** `wheel` names the wheel the gesture belongs to; missing means 'ping' (the site demo leaves it out). */

@@ -30,6 +30,7 @@ export interface PresenceMsg extends Base {
   /** Optional capability: older clients ignore this and continue receiving ordinary pings. */
   emoteSync?: 1;
   chat?: 1;
+  bulletin?: 1;
 }
 export interface PingMsg extends Base {
   t: 'ping';
@@ -70,7 +71,7 @@ export interface EmoteChunkMsg extends Base {
 }
 export type EmoteAssetMsg = EmoteRequestMsg | EmoteChunkMsg;
 export type EmoteAssetBody = Omit<EmoteRequestMsg, keyof Base | 'to'> | Omit<EmoteChunkMsg, keyof Base | 'to'>;
-export interface ChatMsg extends Base { t: 'chat'; text: string }
+export type ChatMsg = Base & ({ t: 'chat'; text: string } | { t: 'announcement'; text: string });
 export type RoomMessage = PresenceMsg | PingMsg | EmoteMsg | ByeMsg | EmoteAssetMsg | ChatMsg;
 
 // C0/C1 controls, zero-width characters, bidi marks, embeddings and isolates, BOM, line/paragraph separators,
@@ -104,7 +105,7 @@ export function validateMessage(raw: unknown): RoomMessage | null {
       if (!isUint(proto) || typeof app !== 'string' || app.length > MAX_APP_VERSION || typeof name !== 'string') return null;
       if (!isTagColor(color) || !STATUSES.includes(status as MemberStatus)) return null;
       return { t, ...base, proto, app, name: sanitizeName(name.slice(0, 256)), color, status: status as MemberStatus,
-        ...(raw.emoteSync === 1 ? { emoteSync: 1 as const } : {}), ...(raw.chat === 1 ? { chat: 1 as const } : {}) };
+        ...(raw.emoteSync === 1 ? { emoteSync: 1 as const } : {}), ...(raw.chat === 1 ? { chat: 1 as const } : {}), ...(raw.bulletin === 1 ? { bulletin: 1 as const } : {}) };
     }
     case 'ping': {
       const { ping, d, x, y } = raw;
@@ -118,7 +119,8 @@ export function validateMessage(raw: unknown): RoomMessage | null {
       if (!isUnit(x) || !isUnit(y)) return null;
       return { t, ...base, e, d: d as number, x, y };
     }
-    case 'chat': {
+    case 'chat':
+    case 'announcement': {
       const text = chatText(raw.text);
       return text ? { t, ...base, text } : null;
     }

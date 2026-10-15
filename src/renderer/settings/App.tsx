@@ -14,6 +14,7 @@ import type { WheelPatch } from '../../shared/wheelLayout';
 import { api } from './api';
 import { AboutSection } from './components/AboutSection';
 import { EmoteSection } from './components/EmoteSection';
+import { ChatSection } from './components/ChatSection';
 import { KeyCapture } from './components/KeyCapture';
 import { PermissionCard } from './components/PermissionCard';
 import { RoomSection } from './components/RoomSection';
@@ -205,9 +206,7 @@ function SettingsPage({ settings: s, status, update }: { settings: Settings; sta
         <RoomSection settings={s} update={update} />
 
         <div className="section" id="chat">{t.lang === 'zh-CN' ? '桌面悄悄话' : 'Private room chat'}</div>
-        <SettingRow icon={<Keyboard24Regular />} title="猫猫文字气泡" description="Ctrl+Alt+Enter 打开输入；Ctrl+Alt+Backspace 立即隐藏。双方需要安装新版，文字端到端加密，不保存聊天记录。">
-          <Button onClick={() => void api.openChat()}>打开输入与外观设置</Button>
-        </SettingRow>
+        <ChatSection chat={s.chat} update={update} />
 
         <div className="section" id="app">{t.navApp}</div>
         <SwitchRow icon={<Rocket24Regular />} title={t.launchAtStartup} description={t.launchAtStartupDesc}

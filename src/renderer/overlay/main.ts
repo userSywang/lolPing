@@ -62,6 +62,7 @@ function localArt(ref: EmoteRef): EmoteArt {
 
 function applySettings(s: OverlaySettings): void {
   settings = s;
+  chatStage.configure(s.chat);
   pingWheel.setItems(pingsFor(s.wheel).map(pingItem));
   emoteWheel.setItems(s.emoteWheel.map(emoteItem));
 }
